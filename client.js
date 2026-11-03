@@ -390,7 +390,7 @@ window.__ModuleLoader__.load({
           setMode('preview')
           notify('已上传并插入附件')
         } catch (cause) {
-          notify(String(cause.message || cause))
+          notify(String(cause.message || cause), 'error')
         } finally {
           setBusy(false)
         }
@@ -1315,14 +1315,14 @@ window.__ModuleLoader__.load({
       const toggle = useCallback(
         (item) =>
           mutate('/item/save', { id: item.id, status: item.status === 'done' ? 'todo' : 'done' }).catch((cause) =>
-            notify(String(cause.message || cause)),
+            notify(String(cause.message || cause), 'error'),
           ),
         [mutate, notify],
       )
       const remove = useCallback(
         (item) => {
           if (!window.confirm('删除「' + item.title + '」？')) return
-          mutate('/item/delete', { id: item.id }).catch((cause) => notify(String(cause.message || cause)))
+          mutate('/item/delete', { id: item.id }).catch((cause) => notify(String(cause.message || cause), 'error'))
         },
         [mutate, notify],
       )
@@ -1346,7 +1346,7 @@ window.__ModuleLoader__.load({
             else if (sync) notify('已关闭，并同步关闭了 GitLab 任务')
             else notify('已关闭')
           } catch (cause) {
-            notify(String(cause.message || cause))
+            notify(String(cause.message || cause), 'error')
           }
         },
         [mutate, notify],
@@ -1423,7 +1423,7 @@ window.__ModuleLoader__.load({
                 onClick: () =>
                   mutate('/export', { date: today }).then(
                     (payload) => notify('已导出：' + payload.path),
-                    (cause) => notify('导出失败：' + String(cause.message || cause)),
+                    (cause) => notify('导出失败：' + String(cause.message || cause), 'error'),
                   ),
               },
               '导出日报',
@@ -1576,7 +1576,7 @@ window.__ModuleLoader__.load({
       const attach = useCallback(
         (itemId, parentId) =>
           mutate('/item/save', { id: itemId, parentId: parentId || null }).catch((cause) =>
-            notify(String(cause.message || cause)),
+            notify(String(cause.message || cause), 'error'),
           ),
         [mutate, notify],
       )
@@ -1585,7 +1585,7 @@ window.__ModuleLoader__.load({
         if (!goalDraft.title.trim()) return
         mutate('/goal/save', { periodKey: monthKey, title: goalDraft.title, target: goalDraft.target, unit: goalDraft.unit })
           .then(() => setGoalDraft({ title: '', target: '', unit: '' }))
-          .catch((cause) => notify(String(cause.message || cause)))
+          .catch((cause) => notify(String(cause.message || cause), 'error'))
       }, [goalDraft, monthKey, mutate, notify])
 
       if (mode === 'month') {
@@ -2108,7 +2108,7 @@ window.__ModuleLoader__.load({
           if (onSaved) onSaved()
           notify('已保存「未完成工作和明天计划」')
         } catch (cause) {
-          notify(String(cause.message || cause))
+          notify(String(cause.message || cause), 'error')
         } finally {
           setBusy(false)
         }
@@ -2121,7 +2121,7 @@ window.__ModuleLoader__.load({
           if (onSaved) onSaved()
           notify('已恢复为自动汇总')
         } catch (cause) {
-          notify(String(cause.message || cause))
+          notify(String(cause.message || cause), 'error')
         } finally {
           setBusy(false)
         }
@@ -2168,7 +2168,7 @@ window.__ModuleLoader__.load({
           if (onSaved) onSaved()
           notify('已保存目标推进')
         } catch (cause) {
-          notify(String(cause.message || cause))
+          notify(String(cause.message || cause), 'error')
         } finally {
           setBusy(false)
         }
@@ -2212,7 +2212,7 @@ window.__ModuleLoader__.load({
           const payload = await call('/report/build', { kind, key })
           setReport(payload.report)
         } catch (cause) {
-          notify(String(cause.message || cause))
+          notify(String(cause.message || cause), 'error')
         } finally {
           setBusy(false)
         }
@@ -2244,17 +2244,17 @@ window.__ModuleLoader__.load({
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(report.markdown).then(
             () => notify('已复制到剪贴板'),
-            () => notify('复制失败，请手动选中预览内容复制'),
+            () => notify('复制失败，请手动选中预览内容复制', 'error'),
           )
         } else {
-          notify('当前环境不支持剪贴板，请手动选中复制')
+          notify('当前环境不支持剪贴板，请手动选中复制', 'error')
         }
       }, [report, notify])
 
       const exportFile = useCallback(() => {
         call('/report/export', { kind, key }).then(
           (payload) => notify('已导出：' + payload.path),
-          (cause) => notify('导出失败：' + String(cause.message || cause)),
+          (cause) => notify('导出失败：' + String(cause.message || cause), 'error'),
         )
       }, [kind, key, notify])
 
@@ -2896,7 +2896,7 @@ window.__ModuleLoader__.load({
                       notify('已保存设置')
                       onClose()
                     },
-                    (cause) => notify(String(cause.message || cause)),
+                    (cause) => notify(String(cause.message || cause), 'error'),
                   ),
               },
               '保存',
@@ -2966,7 +2966,7 @@ window.__ModuleLoader__.load({
                   .then(() => call('/schedule/run'))
                   .then(
                     () => notify('已保存并试跑一次定时任务'),
-                    (cause) => notify(String(cause.message || cause)),
+                    (cause) => notify(String(cause.message || cause), 'error'),
                   ),
             },
             '保存并立即试跑',
@@ -2978,10 +2978,60 @@ window.__ModuleLoader__.load({
 
     // ---------------- root ----------------
 
+    function ToastHost({ toasts }) {
+      if (!toasts || toasts.length === 0) return null
+      return h(
+        'div',
+        {
+          style: {
+            position: 'fixed',
+            zIndex: 120,
+            top: 18,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            alignItems: 'center',
+            pointerEvents: 'none',
+          },
+        },
+        h('style', null, '@keyframes wbToastIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}'),
+        toasts.map((toast) =>
+          h(
+            'div',
+            {
+              key: toast.id,
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: 9,
+                padding: '10px 15px',
+                borderRadius: 12,
+                background: C.panel,
+                boxShadow: '0 12px 36px rgba(0,0,0,.22), 0 2px 6px rgba(0,0,0,.08)',
+                borderLeft: '3px solid ' + (toast.type === 'error' ? C.danger : C.ok),
+                fontSize: 12.5,
+                color: C.text,
+                maxWidth: 'min(560px, 80vw)',
+                animation: 'wbToastIn .16s ease-out',
+              },
+            },
+            h(
+              'span',
+              { style: { color: toast.type === 'error' ? C.danger : C.ok, fontSize: 13, lineHeight: 1 } },
+              toast.type === 'error' ? '✕' : '✓',
+            ),
+            h('span', { style: { whiteSpace: 'pre-wrap' } }, toast.message),
+          ),
+        ),
+      )
+    }
+
     function Workbench() {
       const [state, setState] = useState(null)
       const [error, setError] = useState('')
-      const [notice, setNotice] = useState('')
+      const [toasts, setToasts] = useState([])
       const [tab, setTab] = useState('today')
       const [form, setForm] = useState(null)
       const [settingsOpen, setSettingsOpen] = useState(false)
@@ -3014,9 +3064,12 @@ window.__ModuleLoader__.load({
         return payload
       }, [])
 
-      const notify = useCallback((message) => {
-        setNotice(message)
-        setError('')
+      const notify = useCallback((message, type) => {
+        const id = Math.random().toString(36).slice(2) + Date.now().toString(36)
+        setToasts((current) => current.concat({ id, message: String(message), type: type || 'ok' }))
+        window.setTimeout(() => {
+          setToasts((current) => current.filter((toast) => toast.id !== id))
+        }, 3400)
       }, [])
 
       const openForm = useCallback((initial) => setForm({ initial }), [])
@@ -3113,7 +3166,6 @@ window.__ModuleLoader__.load({
             'div',
             { style: { maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 } },
             error ? h('div', { style: { color: C.danger, fontSize: 12 } }, '读取失败：' + error) : null,
-          notice ? h('div', { style: { color: C.sub, fontSize: 12 } }, notice) : null,
           state.drafts && state.drafts.length > 0
             ? h(
                 'div',
@@ -3163,6 +3215,7 @@ window.__ModuleLoader__.load({
           settingsOpen ? h(SettingsPanel, { state, mutate, onClose: () => setSettingsOpen(false), notify }) : null,
           ),
         ),
+        h(ToastHost, { toasts }),
       )
     }
 
