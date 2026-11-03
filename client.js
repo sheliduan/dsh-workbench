@@ -428,6 +428,218 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function cardStyle(extra) {
+      return Object.assign(
+        {
+          background: C.panel,
+          borderRadius: 16,
+          boxShadow: '0 1px 2px rgba(0,0,0,.05), 0 10px 28px rgba(0,0,0,.07)',
+        },
+        extra || {},
+      )
+    }
+
+    function TextInput({ value, onChange, placeholder, type, autoFocus, width, disabled, multiline, rows }) {
+      const [focus, setFocus] = useState(false)
+      const base = {
+        value: value === null || value === undefined ? '' : value,
+        placeholder,
+        disabled,
+        autoFocus,
+        onChange: (event) => onChange(event.target.value),
+        onFocus: () => setFocus(true),
+        onBlur: () => setFocus(false),
+        style: {
+          width: width || '100%',
+          boxSizing: 'border-box',
+          height: multiline ? 'auto' : 34,
+          minHeight: multiline ? 76 : undefined,
+          padding: multiline ? '8px 10px' : '0 10px',
+          fontSize: 13,
+          fontFamily: 'inherit',
+          color: C.text,
+          background: focus ? C.panel : 'transparent',
+          border: '1px solid ' + (focus ? C.brandLine : C.line),
+          borderRadius: 10,
+          outline: 'none',
+          resize: multiline ? 'vertical' : 'none',
+          boxShadow: focus ? '0 0 0 3px ' + C.brandSoft : 'none',
+          transition: 'border-color .12s ease, box-shadow .12s ease',
+        },
+      }
+      return multiline
+        ? h('textarea', Object.assign({ rows: rows || 3 }, base))
+        : h('input', Object.assign({ type: type || 'text' }, base))
+    }
+
+    function Select({ value, options, onChange, placeholder, disabled, width }) {
+      const [open, setOpen] = useState(false)
+      const ref = React.useRef(null)
+
+      useEffect(() => {
+        if (!open) return undefined
+        const onDoc = (event) => {
+          if (ref.current && !ref.current.contains(event.target)) setOpen(false)
+        }
+        document.addEventListener('mousedown', onDoc)
+        return () => document.removeEventListener('mousedown', onDoc)
+      }, [open])
+
+      const current = options.find((option) => String(option.value) === String(value))
+
+      return h(
+        'div',
+        { ref, style: { position: 'relative', width: width || '100%' } },
+        h(
+          'button',
+          {
+            type: 'button',
+            disabled,
+            onClick: () => !disabled && setOpen(!open),
+            style: {
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              height: 34,
+              padding: '0 10px',
+              fontSize: 13,
+              fontFamily: 'inherit',
+              color: current ? C.text : C.sub,
+              background: open ? C.brandSoft : 'transparent',
+              border: '1px solid ' + (open ? C.brandLine : C.line),
+              borderRadius: 10,
+              cursor: disabled ? 'default' : 'pointer',
+              opacity: disabled ? 0.55 : 1,
+              textAlign: 'left',
+              transition: 'border-color .12s ease, background .12s ease',
+            },
+          },
+          h(
+            'span',
+            { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+            current ? current.label : placeholder || '请选择',
+          ),
+          h('span', { style: { fontSize: 8, color: C.sub, transform: open ? 'rotate(180deg)' : 'none' } }, '▼'),
+        ),
+        open
+          ? h(
+              'div',
+              {
+                style: {
+                  position: 'absolute',
+                  zIndex: 60,
+                  top: 38,
+                  left: 0,
+                  right: 0,
+                  background: C.panel,
+                  borderRadius: 12,
+                  boxShadow: '0 14px 36px rgba(0,0,0,.18)',
+                  padding: 4,
+                  maxHeight: 240,
+                  overflow: 'auto',
+                },
+              },
+              options.map((option) => {
+                const active = String(option.value) === String(value)
+                return h(
+                  'div',
+                  {
+                    key: String(option.value),
+                    onMouseDown: (event) => {
+                      event.preventDefault()
+                      onChange(option.value)
+                      setOpen(false)
+                    },
+                    style: {
+                      padding: '7px 10px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      color: C.text,
+                      background: active ? C.brandSoft : 'transparent',
+                      fontWeight: active ? 600 : 400,
+                    },
+                    onMouseEnter: (event) => {
+                      event.currentTarget.style.background = C.brandSoft
+                    },
+                    onMouseLeave: (event) => {
+                      event.currentTarget.style.background = active ? C.brandSoft : 'transparent'
+                    },
+                  },
+                  option.label,
+                )
+              }),
+            )
+          : null,
+      )
+    }
+
+    function TrendChart({ state }) {
+      const days = []
+      for (let offset = 6; offset >= 0; offset -= 1) {
+        const dateKey = addDays(state.today, -offset)
+        const list = state.items.filter((item) => item.level === 'day' && item.date === dateKey)
+        days.push({
+          key: dateKey,
+          label: dateKey.slice(5).replace('-', '/'),
+          done: list.filter((item) => item.status === 'done').length,
+          spent: round1(list.reduce((sum, item) => sum + (item.spentH || 0), 0)),
+        })
+      }
+      const maxDone = Math.max(1, ...days.map((day) => day.done))
+      const maxSpent = Math.max(1, ...days.map((day) => day.spent))
+
+      return h(
+        'div',
+        cardStyle({ padding: '12px 14px' }),
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 } },
+          h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, '近 7 天'),
+          h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, '实心=完成数　空心=工时'),
+        ),
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'flex-end', gap: 8, height: 86 } },
+          days.map((day) =>
+            h(
+              'div',
+              {
+                key: day.key,
+                style: { flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 },
+              },
+              h(
+                'div',
+                { style: { display: 'flex', alignItems: 'flex-end', gap: 3, height: 58 } },
+                h('div', {
+                  title: '完成 ' + day.done + ' 条',
+                  style: {
+                    width: 9,
+                    height: Math.max(3, Math.round((day.done / maxDone) * 58)),
+                    borderRadius: 3,
+                    background: C.grad,
+                    transition: 'height .3s ease',
+                  },
+                }),
+                h('div', {
+                  title: '工时 ' + day.spent + 'h',
+                  style: {
+                    width: 9,
+                    height: Math.max(3, Math.round((day.spent / maxSpent) * 58)),
+                    borderRadius: 3,
+                    background: 'transparent',
+                    border: '1px solid ' + C.brandLine,
+                  },
+                }),
+              ),
+              h('div', { style: { fontSize: 10, color: C.sub } }, day.label),
+            ),
+          ),
+        ),
+      )
+    }
+
     // ---------------- task form ----------------
 
     function TaskForm({ state, initial, onClose, onSave, onSync, notify }) {
@@ -645,51 +857,46 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { onKeyDown, style: { display: 'flex', flexDirection: 'column', gap: 12 } },
-          h(Field, { label: '标题' }, h('input', {
+          h(Field, { label: '标题' }, h(TextInput, {
             autoFocus: true,
             value: draft.title,
-            onChange: (event) => setDraft({ ...draft, title: event.target.value }),
+            onChange: (next) => setDraft({ ...draft, title: next }),
             placeholder: '一句话说清交付物',
-            style: inputStyle(),
           })),
           h(
             'div',
-            { style: { display: 'flex', gap: 10 } },
+            { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
             h(
               Field,
               { label: isDay ? '日期' : '所属周期', grow: true },
               isDay
-                ? h('input', {
+                ? h(TextInput, {
                     type: 'date',
                     value: draft.date,
-                    onChange: (event) => setDraft({ ...draft, date: event.target.value }),
-                    style: inputStyle(),
+                    onChange: (next) => setDraft({ ...draft, date: next }),
                   })
-                : h('input', {
+                : h(TextInput, {
                     value: draft.level === 'week' ? weekLabel(draft.periodKey) : draft.periodKey,
-                    readOnly: true,
-                    style: inputStyle({ color: C.sub }),
+                    onChange: () => {},
+                    disabled: true,
                   }),
             ),
             isDay
-              ? h(Field, { label: '预估工时 (h)', grow: true }, h('input', {
+              ? h(Field, { label: '预估工时 (h)', grow: true }, h(TextInput, {
                   value: draft.estimateH,
-                  inputMode: 'decimal',
-                  onChange: (event) => setDraft({ ...draft, estimateH: event.target.value }),
-                  style: inputStyle(),
+                  onChange: (next) => setDraft({ ...draft, estimateH: next }),
+                  placeholder: '2 或 2h',
                 }))
               : null,
-            h(Field, { label: '优先级', grow: true }, h(
-              'select',
-              {
-                value: draft.priority,
-                onChange: (event) => setDraft({ ...draft, priority: event.target.value }),
-                style: inputStyle(),
-              },
-              h('option', { value: 'high' }, '高'),
-              h('option', { value: 'mid' }, '中'),
-              h('option', { value: 'low' }, '低'),
-            )),
+            h(Field, { label: '优先级', grow: true }, h(Select, {
+              value: draft.priority,
+              onChange: (next) => setDraft({ ...draft, priority: next }),
+              options: [
+                { value: 'high', label: '高' },
+                { value: 'mid', label: '中' },
+                { value: 'low', label: '低' },
+              ],
+            })),
           ),
           isDay
             ? h(
@@ -698,16 +905,13 @@ window.__ModuleLoader__.load({
                 h(
                   Field,
                   { label: '归属周条目', grow: true },
-                  h(
-                    'select',
-                    {
-                      value: draft.parentId || '',
-                      onChange: (event) => setDraft({ ...draft, parentId: event.target.value }),
-                      style: inputStyle(),
-                    },
-                    h('option', { value: '' }, '不归属（计划外）'),
-                    weekItems.map((item) => h('option', { key: item.id, value: item.id }, item.title)),
-                  ),
+                  h(Select, {
+                    value: draft.parentId || '',
+                    onChange: (next) => setDraft({ ...draft, parentId: next }),
+                    options: [{ value: '', label: '不归属（计划外）' }].concat(
+                      weekItems.map((item) => ({ value: item.id, label: item.title })),
+                    ),
+                  }),
                 ),
               )
             : null,
@@ -744,46 +948,37 @@ window.__ModuleLoader__.load({
                   h(
                     Field,
                     { label: '项目', grow: true },
-                    h(
-                      'select',
-                      {
-                        value: draft.issueProjectId || '',
-                        onChange: (event) =>
-                          setDraft({ ...draft, issueProjectId: event.target.value, milestoneId: '' }),
-                        style: inputStyle(),
-                      },
-                      h('option', { value: '' }, '不关联'),
-                      gitlabProjects.map((project) =>
-                        h('option', { key: project.id, value: project.id }, project.pathWithNamespace || project.name),
+                    h(Select, {
+                      value: draft.issueProjectId || '',
+                      onChange: (next) => setDraft({ ...draft, issueProjectId: next, milestoneId: '' }),
+                      options: [{ value: '', label: '不关联' }].concat(
+                        gitlabProjects.map((project) => ({
+                          value: project.id,
+                          label: project.pathWithNamespace || project.name,
+                        })),
                       ),
-                    ),
+                    }),
                   ),
                   h(
                     Field,
                     { label: '里程碑', grow: true },
-                    h(
-                      'select',
-                      {
-                        value: draft.milestoneId || '',
-                        onChange: (event) => setDraft({ ...draft, milestoneId: event.target.value }),
-                        style: inputStyle(),
-                        disabled: !draft.issueProjectId,
-                      },
-                      h('option', { value: '' }, milestoneLoading ? '读取中…' : '不挂里程碑'),
-                      milestones.map((milestone) =>
-                        h('option', { key: milestone.id, value: milestone.id }, milestone.title),
+                    h(Select, {
+                      value: draft.milestoneId || '',
+                      onChange: (next) => setDraft({ ...draft, milestoneId: next }),
+                      disabled: !draft.issueProjectId,
+                      options: [{ value: '', label: milestoneLoading ? '读取中…' : '不挂里程碑' }].concat(
+                        milestones.map((milestone) => ({ value: milestone.id, label: milestone.title })),
                       ),
-                    ),
+                    }),
                   ),
                 ),
                 h(
                   Field,
                   { label: '已有任务号（填了就更新那条，不填则新建）' },
-                  h('input', {
+                  h(TextInput, {
                     value: draft.issue,
-                    onChange: (event) => setDraft({ ...draft, issue: event.target.value }),
+                    onChange: (next) => setDraft({ ...draft, issue: next }),
                     placeholder: '例如 123',
-                    style: inputStyle(),
                   }),
                 ),
                 h(
@@ -816,33 +1011,26 @@ window.__ModuleLoader__.load({
                 { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
                 isDay
                   ? null
-                  : h(Field, { label: '截止日', grow: true }, h('input', {
+                  : h(Field, { label: '截止日', grow: true }, h(TextInput, {
                       type: 'date',
                       value: draft.dueDate,
-                      onChange: (event) => setDraft({ ...draft, dueDate: event.target.value }),
-                      style: inputStyle(),
+                      onChange: (next) => setDraft({ ...draft, dueDate: next }),
                     })),
-                h(Field, { label: '状态', grow: true }, h(
-                  'select',
-                  {
-                    value: draft.status,
-                    onChange: (event) => setDraft({ ...draft, status: event.target.value }),
-                    style: inputStyle(),
-                  },
-                  Object.keys(STATUS).map((key) => h('option', { key, value: key }, STATUS[key])),
-                )),
+                h(Field, { label: '状态', grow: true }, h(Select, {
+                  value: draft.status,
+                  onChange: (next) => setDraft({ ...draft, status: next }),
+                  options: Object.keys(STATUS).map((key) => ({ value: key, label: STATUS[key] })),
+                })),
                 isDay
-                  ? h(Field, { label: '实际工时 (h)', grow: true }, h('input', {
+                  ? h(Field, { label: '实际工时 (h)', grow: true }, h(TextInput, {
                       value: draft.spentH,
-                      inputMode: 'decimal',
-                      onChange: (event) => setDraft({ ...draft, spentH: event.target.value }),
-                      style: inputStyle(),
+                      onChange: (next) => setDraft({ ...draft, spentH: next }),
+                      placeholder: '1.5 或 90m',
                     }))
-                  : h(Field, { label: '实际完成时间', grow: true }, h('input', {
+                  : h(Field, { label: '实际完成时间', grow: true }, h(TextInput, {
                       type: 'date',
                       value: draft.finishedAt || '',
-                      onChange: (event) => setDraft({ ...draft, finishedAt: event.target.value }),
-                      style: inputStyle(),
+                      onChange: (next) => setDraft({ ...draft, finishedAt: next }),
                     })),
               )
             : null,
@@ -867,9 +1055,11 @@ window.__ModuleLoader__.load({
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            padding: '7px 8px',
-            borderRadius: 6,
-            background: hover ? C.soft : 'transparent',
+            padding: '10px 10px',
+            borderRadius: 8,
+            borderBottom: '1px solid ' + C.line,
+            background: hover ? C.brandSoft : 'transparent',
+            transition: 'background .12s ease',
           },
         },
         h('input', { type: 'checkbox', checked: done, onChange: () => onToggle(item), style: { cursor: 'pointer' } }),
@@ -1055,6 +1245,48 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function WeekPlanList({ state }) {
+      const monday = mondayOf(state.today)
+      const end = addDays(monday, 6)
+      const weekKey = isoWeekKey(state.today)
+      const weeks = state.items.filter((item) => item.level === 'week' && item.periodKey === weekKey)
+      const days = state.items.filter((item) => item.level === 'day' && item.date >= monday && item.date <= end)
+      if (weeks.length === 0) return null
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 } },
+        h('div', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, '本周计划条目'),
+        weeks.map((week) => {
+          const kids = days.filter((item) => item.parentId === week.id)
+          const done = kids.filter((item) => item.status === 'done').length
+          const spent = round1(kids.reduce((sum, item) => sum + (item.spentH || 0), 0))
+          const pct = kids.length ? Math.round((done / kids.length) * 100) : 0
+          return h(
+            'div',
+            {
+              key: week.id,
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '9px 12px',
+                border: '1px solid ' + C.line,
+                borderRadius: 10,
+              },
+            },
+            h('span', { style: { flex: 1, fontSize: 12.5, minWidth: 0 } }, week.title),
+            h('span', { style: { fontSize: 11, color: C.sub, width: 54, textAlign: 'right' } }, kids.length ? done + '/' + kids.length : '未拆解'),
+            h(
+              'div',
+              { style: { width: 96, height: 5, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+              h('div', { style: { width: pct + '%', height: '100%', background: C.grad } }),
+            ),
+            h('span', { style: { fontSize: 11, color: C.sub, width: 44, textAlign: 'right' } }, spent ? spent + 'h' : ''),
+          )
+        }),
+      )
+    }
+
     function TodayView({ state, mutate, openForm, notify }) {
       const today = state.today
       const items = useMemo(
@@ -1067,11 +1299,14 @@ window.__ModuleLoader__.load({
       )
       const stats = useMemo(() => {
         const done = items.filter((item) => item.status === 'done')
+        const open = items.filter((item) => item.status !== 'done' && item.status !== 'dropped')
         const spent = items.reduce((sum, item) => sum + (item.spentH || 0), 0)
         const estimate = items.reduce((sum, item) => sum + (item.estimateH || 0), 0)
         return {
           total: items.length,
           done: done.length,
+          open: open.length,
+          openH: round1(open.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
           spent: round1(spent),
           estimate: round1(estimate),
           offPlan: done.filter((item) => !item.parentId).length,
@@ -1124,6 +1359,22 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { style: { flex: '1 1 520px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 } },
+          h(
+            'div',
+            { style: { display: 'flex', alignItems: 'baseline', gap: 10, padding: '0 2px', flexWrap: 'wrap' } },
+            h(
+              'div',
+              { style: { fontSize: 19, fontWeight: 700, letterSpacing: '-.02em' } },
+              stats.open === 0 ? (stats.total === 0 ? '今天还没开始' : '今天全部完成 🎉') : '还剩 ' + stats.open + ' 件事',
+            ),
+            h(
+              'div',
+              { style: { fontSize: 11.5, color: C.sub } },
+              stats.open === 0
+                ? '已完成 ' + stats.done + ' 条 · 实际 ' + stats.spent + 'h'
+                : '预计还需 ' + stats.openH + 'h · 已完成 ' + stats.done + '/' + stats.total,
+            ),
+          ),
           h(
             'div',
             { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
@@ -1188,6 +1439,8 @@ window.__ModuleLoader__.load({
             onDelete: remove,
             emptyText: '今天还没有任务。点「新建任务」记第一条。',
           }),
+          h(WeekPlanList, { state }),
+          h(TrendChart, { state }),
         ),
         h(
           'div',
@@ -2736,7 +2989,7 @@ window.__ModuleLoader__.load({
       const [themeName, setThemeName] = useState(() => {
         try {
           const saved = window.localStorage.getItem('wb-theme')
-          return saved && THEMES[saved] ? saved : 'indigo'
+          return saved && THEMES[saved] ? saved : 'emerald'
         } catch (error) {
           return 'indigo'
         }
@@ -2782,29 +3035,31 @@ window.__ModuleLoader__.load({
           style: Object.assign(
             {
               height: '100%',
-              overflow: 'auto',
-              padding: '14px 20px 32px',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
               color: C.text,
               fontSize: 13,
               lineHeight: 1.55,
             },
-            themeVars(THEMES[themeName] || THEMES.indigo),
+            themeVars(THEMES[themeName] || THEMES.emerald),
           ),
         },
         h(
           'div',
-          { style: { maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 } },
+          { style: { flex: '0 0 auto', padding: '10px 20px 0' } },
           h(
             'div',
             {
               style: {
+                maxWidth: 980,
+                margin: '0 auto',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
                 flexWrap: 'wrap',
                 padding: '8px 12px',
-                borderRadius: 12,
-                border: '1px solid ' + C.line,
+                borderRadius: 14,
                 background: 'linear-gradient(120deg, ' + C.brandSoft + ', transparent 62%)',
               },
             },
@@ -2851,7 +3106,14 @@ window.__ModuleLoader__.load({
             h(Btn, { small: true, onClick: () => setSettingsOpen(true) }, '设置'),
             h(Btn, { small: true, onClick: reload }, '刷新'),
           ),
-          error ? h('div', { style: { color: C.danger, fontSize: 12 } }, '读取失败：' + error) : null,
+        ),
+        h(
+          'div',
+          { style: { flex: '1 1 auto', overflow: 'auto', padding: '12px 20px 28px' } },
+          h(
+            'div',
+            { style: { maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 } },
+            error ? h('div', { style: { color: C.danger, fontSize: 12 } }, '读取失败：' + error) : null,
           notice ? h('div', { style: { color: C.sub, fontSize: 12 } }, notice) : null,
           state.drafts && state.drafts.length > 0
             ? h(
@@ -2900,6 +3162,7 @@ window.__ModuleLoader__.load({
                 : h(ReportView, { state, notify }),
           form ? h(TaskForm, { state, initial: form.initial, onClose: closeForm, onSave, onSync, notify }) : null,
           settingsOpen ? h(SettingsPanel, { state, mutate, onClose: () => setSettingsOpen(false), notify }) : null,
+          ),
         ),
       )
     }
