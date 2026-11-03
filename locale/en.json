@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "title": "Workbench",
+    "description": "Daily, weekly and monthly plans with reports and delivery records"
+  },
+  "nav": {
+    "workbench": "Workbench"
+  },
+  "ui": {
+    "today": "Today",
+    "plan": "Plan",
+    "stats": "Stats",
+    "report": "Report",
+    "add": "New task",
+    "title": "Title",
+    "estimate": "Estimate",
+    "project": "Project",
+    "priority": "Priority",
+    "export": "Export Markdown",
+    "empty": "No tasks yet today",
+    "done": "Done",
+    "offPlan": "Off-plan",
+    "loading": "Loading…",
+    "failed": "Read failed"
+  }
+}

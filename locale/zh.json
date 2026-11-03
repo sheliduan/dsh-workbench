@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "title": "工作台",
+    "description": "日/周/月计划、日报周报月报与留痕"
+  },
+  "nav": {
+    "workbench": "工作台"
+  },
+  "ui": {
+    "today": "今日",
+    "plan": "计划",
+    "stats": "统计",
+    "report": "报告",
+    "add": "新建任务",
+    "title": "标题",
+    "estimate": "预估工时",
+    "project": "项目",
+    "priority": "优先级",
+    "export": "导出 Markdown",
+    "empty": "今天还没有任务",
+    "done": "已完成",
+    "offPlan": "计划外",
+    "loading": "加载中…",
+    "failed": "读取失败"
+  }
+}
