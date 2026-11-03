@@ -376,11 +376,13 @@ export function apply(ctx) {
     const left = days.filter((item) => item.status !== 'done' && item.status !== 'dropped')
     const hours = round1(done.reduce((sum, item) => sum + (item.spentH ?? item.estimateH ?? 0), 0))
     const narrative = (state.narratives && state.narratives[kind + ':' + key]) || ''
+    const leftAuto = left.map((item) => '　· ' + item.title).join('\n') || '　-'
+    const leftOverride = (state.narratives && state.narratives[kind + ':' + key + ':left']) || ''
 
     const sections = {
       done: bulletHours(done) || '　-',
       hours: String(hours),
-      left: left.map((item) => '　· ' + item.title).join('\n') || '　-',
+      left: leftOverride.trim() ? leftOverride : leftAuto,
       goals: narrative.trim() ? narrative : '　-',
       stats: statsLine(kind, days),
     }
@@ -447,7 +449,15 @@ export function apply(ctx) {
       }
     })
 
-    return { kind, key, title, sections, markdown: body, fields }
+    return {
+      kind,
+      key,
+      title,
+      sections,
+      markdown: body,
+      fields,
+      overrides: { left: Boolean(leftOverride.trim()), goals: Boolean(narrative.trim()) },
+    }
   }
 
   function exportRootPath() {
@@ -1452,7 +1462,18 @@ export function apply(ctx) {
       }
       if (action === '/narrative/save') {
         state.narratives = state.narratives || {}
-        state.narratives[String(body.kind || 'weekly') + ':' + String(body.key || '')] = String(body.text || '')
+        const field = String(body.field || 'goals')
+        const narrativeKey =
+          String(body.kind || 'weekly') + ':' + String(body.key || '') + (field === 'goals' ? '' : ':' + field)
+        state.narratives[narrativeKey] = String(body.text || '')
+        await save()
+        return send(res, 200, { ok: true, state: snapshot() })
+      }
+      if (action === '/narrative/clear') {
+        const field = String(body.field || 'goals')
+        const narrativeKey =
+          String(body.kind || 'weekly') + ':' + String(body.key || '') + (field === 'goals' ? '' : ':' + field)
+        if (state.narratives) delete state.narratives[narrativeKey]
         await save()
         return send(res, 200, { ok: true, state: snapshot() })
       }

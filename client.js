@@ -17,8 +17,28 @@ window.__ModuleLoader__.load({
       line: 'var(--dsw-alias-border-secondary, rgba(0,0,0,0.09))',
       soft: 'var(--dsw-alias-bg-secondary, rgba(0,0,0,0.035))',
       panel: 'var(--dsw-alias-bg-primary, #ffffff)',
-      brand: 'var(--dsw-alias-brand-primary, #4d6bfe)',
+      brand: 'var(--wb-accent, #4d6bfe)',
+      brandSoft: 'color-mix(in srgb, var(--wb-accent, #4d6bfe) 12%, transparent)',
+      brandLine: 'color-mix(in srgb, var(--wb-accent, #4d6bfe) 38%, transparent)',
+      grad: 'linear-gradient(135deg, var(--wb-accent, #4d6bfe), var(--wb-accent2, #8b5cf6))',
       danger: 'var(--dsw-alias-text-danger, #d93025)',
+      ok: '#10b981',
+      warn: '#f59e0b',
+      track: 'color-mix(in srgb, var(--dsw-alias-text-primary, #1b1b1f) 10%, transparent)',
+    }
+
+    const THEMES = {
+      indigo: { name: '靛紫', accent: '#6366f1', accent2: '#a855f7' },
+      ocean: { name: '海蓝', accent: '#2563eb', accent2: '#06b6d4' },
+      emerald: { name: '青绿', accent: '#10b981', accent2: '#22d3ee' },
+    }
+
+    function themeVars(theme) {
+      return {
+        '--wb-accent': theme.accent,
+        '--wb-accent2': theme.accent2,
+        '--wb-soft': 'color-mix(in srgb, ' + theme.accent + ' 12%, transparent)',
+      }
     }
 
     const STATUS = { todo: '待办', doing: '进行中', done: '已完成', dropped: '已放弃' }
@@ -948,6 +968,93 @@ window.__ModuleLoader__.load({
 
     // ---------------- views ----------------
 
+    function Ring({ value, size }) {
+      const side = size || 76
+      const radius = (side - 9) / 2
+      const circumference = 2 * Math.PI * radius
+      const pct = Math.max(0, Math.min(1, Number(value) || 0))
+      return h(
+        'svg',
+        { width: side, height: side, viewBox: '0 0 ' + side + ' ' + side, style: { flex: '0 0 auto' } },
+        h('circle', { cx: side / 2, cy: side / 2, r: radius, fill: 'none', stroke: C.track, strokeWidth: 7 }),
+        h('circle', {
+          cx: side / 2,
+          cy: side / 2,
+          r: radius,
+          fill: 'none',
+          stroke: C.brand,
+          strokeWidth: 7,
+          strokeDasharray: circumference * pct + ' ' + circumference,
+          strokeLinecap: 'round',
+          transform: 'rotate(-90 ' + side / 2 + ' ' + side / 2 + ')',
+          style: { transition: 'stroke-dasharray .35s ease' },
+        }),
+        h(
+          'text',
+          {
+            x: '50%',
+            y: '50%',
+            textAnchor: 'middle',
+            dominantBaseline: 'central',
+            fontSize: 15,
+            fontWeight: 700,
+            fill: C.text,
+          },
+          Math.round(pct * 100) + '%',
+        ),
+      )
+    }
+
+    function MiniStat({ label, value, accent }) {
+      return h(
+        'div',
+        {
+          style: {
+            border: '1px solid ' + C.line,
+            borderRadius: 12,
+            padding: '9px 12px',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 8,
+          },
+        },
+        h('span', { style: { fontSize: 11, color: C.sub } }, label),
+        h('span', { style: { marginLeft: 'auto', fontSize: 15, fontWeight: 700, color: accent || C.text } }, value),
+      )
+    }
+
+    function WeekProgress({ state }) {
+      const monday = mondayOf(state.today)
+      const end = addDays(monday, 6)
+      const days = state.items.filter((item) => item.level === 'day' && item.date >= monday && item.date <= end)
+      const done = days.filter((item) => item.status === 'done').length
+      const pct = days.length ? Math.round((done / days.length) * 100) : 0
+      return h(
+        'div',
+        {
+          style: {
+            border: '1px solid ' + C.line,
+            borderRadius: 12,
+            padding: '9px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 7,
+          },
+        },
+        h(
+          'div',
+          { style: { display: 'flex', fontSize: 11, color: C.sub } },
+          h('span', null, '本周进度'),
+          h('span', { style: { marginLeft: 'auto', color: C.text, fontWeight: 600 } }, done + '/' + days.length),
+        ),
+        h(
+          'div',
+          { style: { height: 6, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+          h('div', { style: { width: pct + '%', height: '100%', background: C.grad, transition: 'width .35s ease' } }),
+        ),
+      )
+    }
+
     function TodayView({ state, mutate, openForm, notify }) {
       const today = state.today
       const items = useMemo(
@@ -1013,36 +1120,108 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
+        { style: { display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' } },
         h(
           'div',
-          { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
-          h(Btn, { primary: true, onClick: () => openForm(null) }, '+ 新建任务'),
+          { style: { flex: '1 1 520px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 } },
           h(
-            Btn,
-            {
-              onClick: () =>
-                mutate('/item/rollover', { date: today }).then((payload) =>
-                  notify(payload.moved ? `已顺延 ${payload.moved} 条到 ${payload.target}` : '没有需要顺延的任务'),
-                ),
-            },
-            '顺延未完成',
+            'div',
+            { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+            h(
+              'button',
+              {
+                onClick: () => openForm(null),
+                style: {
+                  border: 'none',
+                  background: C.grad,
+                  color: '#fff',
+                  borderRadius: 8,
+                  padding: '7px 14px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  boxShadow: '0 2px 10px ' + C.brandLine,
+                  transition: 'transform .12s ease, box-shadow .12s ease',
+                },
+                onMouseEnter: (event) => {
+                  event.currentTarget.style.transform = 'translateY(-1px)'
+                  event.currentTarget.style.boxShadow = '0 6px 18px ' + C.brandLine
+                },
+                onMouseLeave: (event) => {
+                  event.currentTarget.style.transform = 'translateY(0)'
+                  event.currentTarget.style.boxShadow = '0 2px 10px ' + C.brandLine
+                },
+              },
+              '+ 新建任务',
+            ),
+            h(
+              Btn,
+              {
+                small: true,
+                onClick: () =>
+                  mutate('/item/rollover', { date: today }).then((payload) =>
+                    notify(payload.moved ? `已顺延 ${payload.moved} 条到 ${payload.target}` : '没有需要顺延的任务'),
+                  ),
+              },
+              '顺延未完成',
+            ),
+            h(
+              Btn,
+              {
+                small: true,
+                onClick: () =>
+                  mutate('/export', { date: today }).then(
+                    (payload) => notify('已导出：' + payload.path),
+                    (cause) => notify('导出失败：' + String(cause.message || cause)),
+                  ),
+              },
+              '导出日报',
+            ),
           ),
-          h('div', { style: { flex: 1 } }),
-          h(Chip, { label: '完成', value: `${stats.done}/${stats.total}` }),
-          h(Chip, { label: '计划外', value: String(stats.offPlan) }),
-          h(Chip, { label: '预估', value: stats.estimate + 'h' }),
-          h(Chip, { label: '实际', value: stats.spent + 'h' }),
+          h(GroupedList, {
+            items,
+            allItems: state.items,
+            onToggle: toggle,
+            onComplete: complete,
+            onEdit: (item) => openForm(item),
+            onDelete: remove,
+            emptyText: '今天还没有任务。点「新建任务」记第一条。',
+          }),
         ),
-        h(GroupedList, {
-          items,
-          allItems: state.items,
-          onToggle: toggle,
-          onComplete: complete,
-          onEdit: (item) => openForm(item),
-          onDelete: remove,
-          emptyText: '今天还没有任务。点「新建任务」记第一条。',
-        }),
+        h(
+          'div',
+          { style: { flex: '0 1 232px', minWidth: 210, display: 'flex', flexDirection: 'column', gap: 10 } },
+          h(
+            'div',
+            {
+              style: {
+                border: '1px solid ' + C.line,
+                borderRadius: 14,
+                padding: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                background: 'linear-gradient(135deg, ' + C.brandSoft + ', transparent 70%)',
+              },
+            },
+            h(Ring, { value: stats.total === 0 ? 0 : stats.done / stats.total }),
+            h(
+              'div',
+              { style: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 } },
+              h('div', { style: { fontSize: 11, color: C.sub, letterSpacing: '.04em' } }, '今日完成'),
+              h('div', { style: { fontSize: 20, fontWeight: 700, lineHeight: 1.2 } }, stats.done + ' / ' + stats.total),
+              h(
+                'div',
+                { style: { fontSize: 11, color: stats.offPlan ? C.warn : C.sub } },
+                stats.offPlan ? '计划外 ' + stats.offPlan + ' 条' : '全部在计划内',
+              ),
+            ),
+          ),
+          h(MiniStat, { label: '预估工时', value: stats.estimate + 'h', accent: C.brand }),
+          h(MiniStat, { label: '实际工时', value: stats.spent + 'h', accent: C.ok }),
+          h(WeekProgress, { state }),
+        ),
       )
     }
 
@@ -1660,6 +1839,67 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function LeftEditor({ report, kind, key, notify, onSaved }) {
+      const current = report.sections.left
+      const overridden = Boolean(report.overrides && report.overrides.left)
+      const [text, setText] = useState(current)
+      const [busy, setBusy] = useState(false)
+
+      useEffect(() => {
+        setText(current)
+      }, [current, kind, key])
+
+      const save = async () => {
+        setBusy(true)
+        try {
+          await call('/narrative/save', { kind, key, field: 'left', text })
+          if (onSaved) onSaved()
+          notify('已保存「未完成工作和明天计划」')
+        } catch (cause) {
+          notify(String(cause.message || cause))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      const reset = async () => {
+        setBusy(true)
+        try {
+          await call('/narrative/clear', { kind, key, field: 'left' })
+          if (onSaved) onSaved()
+          notify('已恢复为自动汇总')
+        } catch (cause) {
+          notify(String(cause.message || cause))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      return h(
+        'div',
+        { style: { flex: '1 1 240px', display: 'flex', flexDirection: 'column', gap: 6 } },
+        h(
+          'div',
+          { style: { fontSize: 12, color: C.sub } },
+          '未完成工作和明天计划　' + (overridden ? '（已手改）' : '（自动汇总，可补充明日计划）'),
+        ),
+        h('textarea', {
+          value: text,
+          rows: 6,
+          onChange: (event) => setText(event.target.value),
+          placeholder: '　· 未完成的 xxx\n　· 明日：xxx',
+          style: inputStyle({ resize: 'vertical', minHeight: 120, fontFamily: 'inherit' }),
+        }),
+        h(
+          'div',
+          { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+          h(Btn, { small: true, onClick: save, disabled: busy }, busy ? '保存中…' : '保存'),
+          overridden ? h(Btn, { small: true, onClick: reset, disabled: busy }, '恢复自动') : null,
+          h('span', { style: { fontSize: 11, color: C.sub } }, '保存后日报与钉钉提交都会用这段文字'),
+        ),
+      )
+    }
+
     function NarrativePanel({ state, kind, key, notify, onSaved }) {
       const saved = (state.narratives && state.narratives[kind + ':' + key]) || ''
       const [text, setText] = useState(saved)
@@ -1886,9 +2126,12 @@ window.__ModuleLoader__.load({
             }, report ? report.markdown : '生成中…'),
           ),
           kind === 'daily' && report
+            ? h(LeftEditor, { report, kind, key, notify, onSaved: load })
+            : null,
+          kind === 'daily' && report
             ? h(
                 'div',
-                { style: { flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: 6 } },
+                { style: { flex: '1 1 240px', display: 'flex', flexDirection: 'column', gap: 6 } },
                 h('div', { style: { fontSize: 12, color: C.sub } }, '提交钉钉时的字段映射'),
                 report.fields.map((field) =>
                   h(
@@ -2490,6 +2733,14 @@ window.__ModuleLoader__.load({
       const [tab, setTab] = useState('today')
       const [form, setForm] = useState(null)
       const [settingsOpen, setSettingsOpen] = useState(false)
+      const [themeName, setThemeName] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem('wb-theme')
+          return saved && THEMES[saved] ? saved : 'indigo'
+        } catch (error) {
+          return 'indigo'
+        }
+      })
 
       const reload = useCallback(async () => {
         try {
@@ -2528,16 +2779,37 @@ window.__ModuleLoader__.load({
       return h(
         'div',
         {
-          style: { height: '100%', overflow: 'auto', padding: '20px 28px 40px', color: C.text, fontSize: 13, lineHeight: 1.6 },
+          style: Object.assign(
+            {
+              height: '100%',
+              overflow: 'auto',
+              padding: '14px 20px 32px',
+              color: C.text,
+              fontSize: 13,
+              lineHeight: 1.55,
+            },
+            themeVars(THEMES[themeName] || THEMES.indigo),
+          ),
         },
         h(
           'div',
-          { style: { maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 } },
+          { style: { maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 } },
           h(
             'div',
-            { style: { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' } },
-            h('div', { style: { fontSize: 17, fontWeight: 600 } }, '工作台'),
-            h('div', { style: { color: C.sub, fontSize: 12 } }, state.today),
+            {
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                flexWrap: 'wrap',
+                padding: '8px 12px',
+                borderRadius: 12,
+                border: '1px solid ' + C.line,
+                background: 'linear-gradient(120deg, ' + C.brandSoft + ', transparent 62%)',
+              },
+            },
+            h('div', { style: { fontSize: 16, fontWeight: 700, letterSpacing: '-.01em' } }, '工作台'),
+            h('div', { style: { color: C.sub, fontSize: 11.5 } }, state.today),
             h(Segmented, {
               value: tab,
               options: [
@@ -2549,6 +2821,33 @@ window.__ModuleLoader__.load({
               onChange: setTab,
             }),
             h('div', { style: { flex: 1 } }),
+            h(
+              'div',
+              { style: { display: 'flex', gap: 6, alignItems: 'center' } },
+              Object.keys(THEMES).map((key) =>
+                h('button', {
+                  key,
+                  title: '配色：' + THEMES[key].name,
+                  onClick: () => {
+                    setThemeName(key)
+                    try {
+                      window.localStorage.setItem('wb-theme', key)
+                    } catch (error) {
+                      // 忽略
+                    }
+                  },
+                  style: {
+                    width: 15,
+                    height: 15,
+                    padding: 0,
+                    borderRadius: 999,
+                    cursor: 'pointer',
+                    border: themeName === key ? '2px solid ' + C.text : '2px solid transparent',
+                    background: 'linear-gradient(135deg, ' + THEMES[key].accent + ', ' + THEMES[key].accent2 + ')',
+                  },
+                }),
+              ),
+            ),
             h(Btn, { small: true, onClick: () => setSettingsOpen(true) }, '设置'),
             h(Btn, { small: true, onClick: reload }, '刷新'),
           ),
