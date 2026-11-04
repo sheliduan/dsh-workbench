@@ -2450,6 +2450,376 @@ window.__ModuleLoader__.load({
       })
     }
 
+    function InlineArea({ value, onChange, onCommit, placeholder }) {
+      const ref = React.useRef(null)
+      const [focus, setFocus] = useState(false)
+
+      useEffect(() => {
+        const node = ref.current
+        if (!node) return
+        node.style.height = 'auto'
+        node.style.height = Math.max(60, node.scrollHeight) + 'px'
+      }, [value])
+
+      return h(
+        'div',
+        {
+          style: {
+            position: 'relative',
+            margin: '-4px -10px',
+            padding: '4px 10px',
+            borderRadius: 10,
+            background: focus ? C.brandSoft : 'transparent',
+            transition: 'background .15s ease',
+          },
+        },
+        h('textarea', {
+          ref,
+          value,
+          placeholder,
+          onChange: (event) => onChange(event.target.value),
+          onFocus: () => setFocus(true),
+          onBlur: () => {
+            setFocus(false)
+            if (onCommit) onCommit()
+          },
+          style: {
+            width: '100%',
+            boxSizing: 'border-box',
+            border: 'none',
+            outline: 'none',
+            resize: 'none',
+            overflow: 'hidden',
+            background: 'transparent',
+            color: C.text,
+            fontSize: 13,
+            lineHeight: 1.95,
+            fontFamily: 'inherit',
+            padding: 0,
+            display: 'block',
+          },
+        }),
+      )
+    }
+
+    function DocSection({ title, hint, children, accent }) {
+      return h(
+        'section',
+        { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'baseline', gap: 8, borderBottom: '1px solid ' + C.line, paddingBottom: 6 } },
+          h(
+            'span',
+            {
+              style: {
+                fontSize: 11.5,
+                fontWeight: 600,
+                letterSpacing: '.06em',
+                color: accent ? C.brand : C.sub,
+              },
+            },
+            title,
+          ),
+          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, hint) : null,
+        ),
+        children,
+      )
+    }
+
+    function ReportDoc({ state, notify }) {
+      const [kind, setKind] = useState('daily')
+      const [key, setKey] = useState(state.today)
+      const [report, setReport] = useState(null)
+      const [busy, setBusy] = useState(false)
+      const [submitOpen, setSubmitOpen] = useState(false)
+      const [leftText, setLeftText] = useState('')
+      const [goalsText, setGoalsText] = useState('')
+      const lastLeft = React.useRef('')
+      const lastGoals = React.useRef('')
+
+      const load = useCallback(async () => {
+        setBusy(true)
+        try {
+          const payload = await call('/report/build', { kind, key })
+          setReport(payload.report)
+          setLeftText(payload.report.sections.left)
+          setGoalsText(payload.report.sections.goals)
+          lastLeft.current = payload.report.sections.left
+          lastGoals.current = payload.report.sections.goals
+        } catch (cause) {
+          notify(String(cause.message || cause), 'error')
+        } finally {
+          setBusy(false)
+        }
+      }, [kind, key, notify])
+
+      useEffect(() => {
+        load()
+      }, [load])
+
+      const changeKind = useCallback(
+        (next) => {
+          setKind(next)
+          setKey(next === 'daily' ? state.today : next === 'weekly' ? isoWeekKey(state.today) : state.today.slice(0, 7))
+        },
+        [state.today],
+      )
+
+      const shift = useCallback(
+        (delta) => {
+          if (kind === 'daily') setKey(addDays(key, delta))
+          else if (kind === 'weekly') setKey(isoWeekKey(addDays(mondayOfWeekKey(key), delta * 7)))
+          else setKey(shiftMonth(key, delta))
+        },
+        [kind, key],
+      )
+
+      const saveField = async (field, text, previous, label) => {
+        if (text === previous) return
+        try {
+          await call('/narrative/save', { kind, key, field, text })
+          if (field === 'left') lastLeft.current = text
+          else lastGoals.current = text
+          await load()
+          notify('已更新' + label)
+        } catch (cause) {
+          notify(String(cause.message || cause), 'error')
+        }
+      }
+
+      const resetDefaults = useCallback(async () => {
+        setBusy(true)
+        try {
+          await call('/narrative/clear', { kind, key, field: 'left' })
+          if (kind !== 'daily') await call('/narrative/clear', { kind, key, field: 'goals' })
+          await load()
+          notify('已恢复默认内容')
+        } catch (cause) {
+          notify(String(cause.message || cause), 'error')
+        } finally {
+          setBusy(false)
+        }
+      }, [kind, key, load, notify])
+
+      const copy = useCallback(() => {
+        if (!report) return
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(report.markdown).then(
+            () => notify('已复制到剪贴板'),
+            () => notify('复制失败，请手动选中', 'error'),
+          )
+        } else {
+          notify('当前环境不支持剪贴板', 'error')
+        }
+      }, [report, notify])
+
+      const exportFile = useCallback(() => {
+        call('/report/export', { kind, key }).then(
+          (payload) => notify('已导出：' + payload.path),
+          (cause) => notify('导出失败：' + String(cause.message || cause), 'error'),
+        )
+      }, [kind, key, notify])
+
+      const todayWeek = isoWeekKey(state.today)
+      const atLatest =
+        kind === 'daily' ? key >= state.today : kind === 'weekly' ? key >= todayWeek : key >= state.today.slice(0, 7)
+
+      const periodLabel = kind === 'daily' ? key : kind === 'weekly' ? weekLabel(key) : key
+
+      const periodItems = useMemo(() => {
+        const days = state.items.filter((item) => {
+          if (item.level !== 'day') return false
+          if (kind === 'daily') return item.date === key
+          if (kind === 'weekly') return isoWeekKey(item.date) === key
+          return item.date.slice(0, 7) === key
+        })
+        return {
+          all: days,
+          done: days.filter((item) => item.status === 'done'),
+          open: days.filter((item) => item.status !== 'done' && item.status !== 'dropped'),
+          hours: round1(days.reduce((sum, item) => sum + (item.status === 'done' ? item.spentH || item.estimateH || 0 : 0), 0)),
+        }
+      }, [state.items, kind, key])
+
+      const doneGroups = useMemo(() => {
+        const groups = new Map()
+        for (const item of periodItems.done) {
+          const label = planLabel(item, state.items)
+          if (!groups.has(label)) groups.set(label, [])
+          groups.get(label).push(item)
+        }
+        return Array.from(groups.entries())
+      }, [periodItems.done, state.items])
+
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+          h(Segmented, {
+            value: kind,
+            options: [
+              { value: 'daily', label: '日报' },
+              { value: 'weekly', label: '周报' },
+              { value: 'monthly', label: '月报' },
+            ],
+            onChange: changeKind,
+          }),
+          h(Btn, { small: true, onClick: () => shift(-1) }, '‹'),
+          kind === 'daily'
+            ? h(TextInput, {
+                type: 'date',
+                value: key,
+                onChange: setKey,
+                width: 150,
+              })
+            : h('div', { style: { fontSize: 12.5, fontWeight: 600, minWidth: 170 } }, periodLabel),
+          h(Btn, { small: true, disabled: atLatest, onClick: () => shift(1) }, '›'),
+          h('div', { style: { flex: 1 } }),
+          h(Btn, { small: true, onClick: resetDefaults, disabled: busy }, '恢复默认'),
+          h(Btn, { small: true, onClick: load, disabled: busy }, busy ? '刷新中…' : '刷新'),
+          h(Btn, { small: true, onClick: copy }, '复制'),
+          h(Btn, { small: true, onClick: exportFile }, '导出'),
+          kind === 'daily' && report ? h(Btn, { primary: true, onClick: () => setSubmitOpen(true) }, '提交钉钉') : null,
+        ),
+
+        h(
+          'div',
+          cardStyle({ padding: '22px 26px 26px', display: 'flex', flexDirection: 'column', gap: 18 }),
+          h(
+            'div',
+            { style: { display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' } },
+            h(
+              'div',
+              { style: { fontSize: 20, fontWeight: 700, letterSpacing: '-.02em' } },
+              kind === 'daily' ? '工作日报' : kind === 'weekly' ? '工作周报' : '工作月报',
+            ),
+            h('div', { style: { fontSize: 12, color: C.sub, paddingBottom: 3 } }, periodLabel),
+            h('div', { style: { flex: 1 } }),
+            h(
+              'div',
+              {
+                style: {
+                  fontSize: 11,
+                  color: C.brand,
+                  background: C.brandSoft,
+                  padding: '3px 10px',
+                  borderRadius: 999,
+                },
+              },
+              '完成 ' + periodItems.done.length + ' / ' + periodItems.all.length + ' · ' + periodItems.hours + 'h',
+            ),
+          ),
+
+          kind !== 'daily'
+            ? h(
+                DocSection,
+                { title: '一、目标推进 / 小结', hint: '可直接编辑，失焦自动保存', accent: true },
+                h(InlineArea, {
+                  value: goalsText,
+                  onChange: setGoalsText,
+                  onCommit: () => saveField('goals', goalsText, lastGoals.current, '目标推进'),
+                  placeholder: '写这一周/这个月的目标推进情况、关键结论、下阶段重点…',
+                }),
+              )
+            : null,
+
+          h(
+            DocSection,
+            { title: kind === 'daily' ? '一、今日完成工作' : '二、本期完成', hint: '自动汇总，不可编辑' },
+            doneGroups.length === 0
+              ? h('div', { style: { fontSize: 12.5, color: C.sub } }, '这段时间还没有已完成的任务')
+              : h(
+                  'div',
+                  { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+                  doneGroups.map(([label, list]) =>
+                    h(
+                      'div',
+                      { key: label },
+                      h('div', { style: { fontSize: 11, color: C.sub, marginBottom: 4 } }, label),
+                      list.map((item) =>
+                        h(
+                          'div',
+                          {
+                            key: item.id,
+                            style: { display: 'flex', alignItems: 'baseline', gap: 8, padding: '3px 0', fontSize: 13 },
+                          },
+                          h('span', { style: { color: C.ok, fontSize: 11 } }, '✓'),
+                          h('span', { style: { flex: 1 } }, item.title),
+                          item.spentH || item.estimateH
+                            ? h(
+                                'span',
+                                { style: { fontSize: 11, color: C.sub } },
+                                (item.spentH ?? item.estimateH) + 'h',
+                              )
+                            : null,
+                          isWeekend(item.date)
+                            ? h('span', { style: { fontSize: 10, color: C.warn } }, '加班')
+                            : null,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+          ),
+
+          h(
+            DocSection,
+            {
+              title: kind === 'daily' ? '二、所用工时' : '三、所用工时',
+              hint: '自动统计，不可编辑',
+            },
+            h('div', { style: { fontSize: 26, fontWeight: 700, letterSpacing: '-.02em' } }, periodItems.hours + ' h'),
+          ),
+
+          h(
+            DocSection,
+            {
+              title: kind === 'daily' ? '三、未完成工作和明天计划' : '四、未完成 / 下一步计划',
+              hint: '可直接编辑，失焦自动保存',
+              accent: true,
+            },
+            h(InlineArea, {
+              value: leftText,
+              onChange: setLeftText,
+              onCommit: () => saveField('left', leftText, lastLeft.current, '未完成段'),
+              placeholder: kind === 'daily' ? '　· 未完成的 xxx\n　· 明日：xxx' : '　· 未完成的 xxx\n　· 下一步：xxx',
+            }),
+          ),
+
+          h(
+            'div',
+            {
+              style: {
+                display: 'flex',
+                gap: 16,
+                flexWrap: 'wrap',
+                borderTop: '1px solid ' + C.line,
+                paddingTop: 10,
+                fontSize: 11.5,
+                color: C.sub,
+              },
+            },
+            h('span', null, '计划达成 ' + (periodItems.all.filter((item) => item.parentId).length
+              ? Math.round(
+                  (periodItems.done.filter((item) => item.parentId).length /
+                    periodItems.all.filter((item) => item.parentId).length) *
+                    100,
+                ) + '%'
+              : '—')),
+            h('span', null, '计划外 ' + periodItems.done.filter((item) => !item.parentId).length + ' 条'),
+            h('span', null, report && report.overrides && (report.overrides.left || report.overrides.goals) ? '含手写内容' : '全部自动生成'),
+          ),
+        ),
+
+        submitOpen && report
+          ? h(SubmitModal, { state, report, onClose: () => setSubmitOpen(false), notify })
+          : null,
+      )
+    }
+
     function ReportView({ state, notify }) {
       const [kind, setKind] = useState('daily')
       const [key, setKey] = useState(state.today)
@@ -3522,7 +3892,7 @@ window.__ModuleLoader__.load({
               ? h(PlanView, { state, mutate, openForm, notify })
               : tab === 'stats'
                 ? h(StatsView, { state })
-                : h(ReportView, { state, notify }),
+                : h(ReportDoc, { state, notify }),
           form ? h(TaskForm, { state, initial: form.initial, onClose: closeForm, onSave, onSync, notify }) : null,
           settingsOpen ? h(SettingsPanel, { state, mutate, onClose: () => setSettingsOpen(false), notify }) : null,
           ),
