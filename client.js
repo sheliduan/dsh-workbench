@@ -2231,6 +2231,132 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function DocEditor({ label, hint, value, onChange, onSave, onReset, canReset, placeholder, busy }) {
+      const [focus, setFocus] = useState(false)
+      const ref = React.useRef(null)
+      const text = value || ''
+
+      const wrapSelection = (before, after) => {
+        const node = ref.current
+        if (!node) return
+        const start = node.selectionStart
+        const end = node.selectionEnd
+        const selected = text.slice(start, end) || '文字'
+        onChange(text.slice(0, start) + before + selected + after + text.slice(end))
+        window.setTimeout(() => {
+          node.focus()
+          node.setSelectionRange(start + before.length, start + before.length + selected.length)
+        }, 0)
+      }
+
+      const prefixLine = (prefix) => {
+        const node = ref.current
+        if (!node) return
+        const start = node.selectionStart
+        const lineStart = text.lastIndexOf('\n', Math.max(0, start - 1)) + 1
+        onChange(text.slice(0, lineStart) + prefix + text.slice(lineStart))
+        window.setTimeout(() => {
+          node.focus()
+          node.setSelectionRange(start + prefix.length, start + prefix.length)
+        }, 0)
+      }
+
+      const tool = (labelText, onClick, title) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            title,
+            onMouseDown: (event) => {
+              event.preventDefault()
+              onClick()
+            },
+            style: {
+              border: 'none',
+              background: 'transparent',
+              color: C.sub,
+              cursor: 'pointer',
+              fontSize: 12,
+              padding: '2px 7px',
+              borderRadius: 6,
+              fontFamily: 'inherit',
+            },
+            onMouseEnter: (event) => {
+              event.currentTarget.style.background = C.brandSoft
+            },
+            onMouseLeave: (event) => {
+              event.currentTarget.style.background = 'transparent'
+            },
+          },
+          labelText,
+        )
+
+      return h(
+        'div',
+        cardStyle({ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px' }),
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+          h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, label),
+          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, hint) : null,
+        ),
+        h(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              gap: 2,
+              alignItems: 'center',
+              opacity: focus ? 1 : 0.35,
+              transition: 'opacity .15s ease',
+              borderBottom: '1px solid ' + C.line,
+              paddingBottom: 4,
+            },
+          },
+          tool('B', () => wrapSelection('**', '**'), '加粗'),
+          tool('`', () => wrapSelection('`', '`'), '行内代码'),
+          tool('•', () => prefixLine('- '), '列表'),
+          tool('H', () => prefixLine('## '), '小标题'),
+        ),
+        h('textarea', {
+          ref,
+          value: text,
+          placeholder,
+          onChange: (event) => onChange(event.target.value),
+          onFocus: () => setFocus(true),
+          onBlur: () => setFocus(false),
+          style: {
+            width: '100%',
+            boxSizing: 'border-box',
+            border: 'none',
+            outline: 'none',
+            resize: 'vertical',
+            background: 'transparent',
+            color: C.text,
+            fontSize: 13,
+            lineHeight: 1.9,
+            fontFamily: 'inherit',
+            minHeight: 150,
+            padding: 0,
+          },
+        }),
+        h(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              borderTop: '1px solid ' + C.line,
+              paddingTop: 8,
+            },
+          },
+          h(Btn, { small: true, onClick: onSave, disabled: busy }, busy ? '保存中…' : '保存'),
+          canReset ? h(Btn, { small: true, onClick: onReset, disabled: busy }, '恢复自动') : null,
+        ),
+      )
+    }
+
     function LeftEditor({ report, kind, periodKey, notify, onSaved }) {
       const current = report.sections.left
       const overridden = Boolean(report.overrides && report.overrides.left)
@@ -2272,32 +2398,17 @@ window.__ModuleLoader__.load({
         }
       }
 
-      return h(
-        'div',
-        { style: { flex: '1 1 240px', display: 'flex', flexDirection: 'column', gap: 6 } },
-        h(
-          'div',
-          { style: { fontSize: 12, color: C.sub } },
-          '未完成工作和明天计划　' + (overridden ? '（已手改）' : '（自动汇总，可补充明日计划）'),
-        ),
-        h('textarea', {
-          value: text,
-          rows: 6,
-          onChange: (event) => setText(event.target.value),
-          onBlur: () => {
-            if (text !== current) save()
-          },
-          placeholder: '　· 未完成的 xxx\n　· 明日：xxx',
-          style: inputStyle({ resize: 'vertical', minHeight: 120, fontFamily: 'inherit' }),
-        }),
-        h(
-          'div',
-          { style: { display: 'flex', gap: 8, alignItems: 'center' } },
-          h(Btn, { small: true, onClick: save, disabled: busy }, busy ? '保存中…' : '保存'),
-          overridden ? h(Btn, { small: true, onClick: reset, disabled: busy }, '恢复自动') : null,
-          h('span', { style: { fontSize: 11, color: C.sub } }, '保存后日报与钉钉提交都会用这段文字'),
-        ),
-      )
+      return h(DocEditor, {
+        label: '未完成工作和明天计划',
+        hint: overridden ? '已手改' : '自动汇总，可直接补充明日计划',
+        value: text,
+        onChange: setText,
+        onSave: save,
+        onReset: reset,
+        canReset: overridden,
+        placeholder: '　· 未完成的 xxx\n　· 明日：xxx',
+        busy,
+      })
     }
 
     function NarrativePanel({ state, kind, periodKey, notify, onSaved }) {
@@ -2327,31 +2438,16 @@ window.__ModuleLoader__.load({
         }
       }
 
-      return h(
-        'div',
-        cardStyle({ flex: '1 1 260px', minWidth: 240, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }),
-        h(
-          'div',
-          { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } },
-          kind === 'weekly' ? '本周目标推进 / 小结（手写）' : '本月目标达成（手写）',
-        ),
-        h('textarea', {
-          value: text,
-          rows: 8,
-          onChange: (event) => setText(event.target.value),
-          onBlur: () => {
-            if (text !== saved) save()
-          },
-          placeholder: '例如：合同模块二期进入联调，接口可用性从 82% 提升到 88%；下月重点是试点上线。',
-          style: inputStyle({ resize: 'vertical', minHeight: 130 }),
-        }),
-        h(
-          'div',
-          { style: { display: 'flex', gap: 8, alignItems: 'center' } },
-          h(Btn, { small: true, onClick: save, disabled: busy }, busy ? '保存中…' : '保存并刷新报告'),
-          h('span', { style: { fontSize: 11, color: C.sub } }, '保存后出现在报告「一、目标推进」段'),
-        ),
-      )
+      return h(DocEditor, {
+        label: kind === 'weekly' ? '本周目标推进 / 小结' : '本月目标达成',
+        hint: '保存后写入报告对应段落',
+        value: text,
+        onChange: setText,
+        onSave: save,
+        canReset: false,
+        placeholder: '例如：合同模块二期进入联调，接口可用性从 82% 提升到 88%；下月重点是试点上线。',
+        busy,
+      })
     }
 
     function ReportView({ state, notify }) {
@@ -2450,66 +2546,68 @@ window.__ModuleLoader__.load({
           h('div', { style: { flex: 1 } }),
           h(Btn, { small: true, onClick: load }, busy ? '刷新中…' : '刷新'),
           h(Btn, { small: true, onClick: copy }, '复制'),
-          h(Btn, { small: true, onClick: () => setHistoryOpen(!historyOpen) }, '历史 ' + ((state.reportIndex || []).length)),
           kind === 'daily' ? h(Btn, { primary: true, onClick: () => setSubmitOpen(true) }, '提交钉钉') : null,
           h(Btn, { small: true, onClick: exportFile }, '导出'),
         ),
-        historyOpen
-          ? h(
-              'div',
-              {
-                style: {
-                  border: '1px solid ' + C.line,
-                  borderRadius: 8,
-                  padding: 8,
-                  maxHeight: 220,
-                  overflow: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                },
-              },
-              (state.reportIndex || []).length === 0
-                ? h('div', { style: { fontSize: 12, color: C.sub } }, '还没有生成过报告')
-                : (state.reportIndex || []).map((entry) =>
-                    h(
-                      'div',
-                      {
-                        key: entry.id,
-                        onClick: () => {
-                          setKind(entry.kind)
-                          setKey(entry.periodKey)
-                          setHistoryOpen(false)
-                        },
-                        style: {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          fontSize: 12.5,
-                          padding: '4px 6px',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          background: entry.kind === kind && entry.periodKey === key ? C.soft : 'transparent',
-                        },
-                      },
-                      h(
-                        'span',
-                        { style: { width: 40, color: C.sub, fontSize: 11 } },
-                        entry.kind === 'daily' ? '日报' : entry.kind === 'weekly' ? '周报' : '月报',
-                      ),
-                      h('span', { style: { flex: 1 } }, entry.periodKey),
-                      h(
-                        'span',
-                        { style: { fontSize: 11, color: entry.status === 'submitted' ? C.brand : C.sub } },
-                        entry.status === 'submitted' ? '已提交' : '草稿',
-                      ),
-                    ),
-                  ),
-            )
-          : null,
         h(
           'div',
           { style: { display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' } },
+          h(
+            'div',
+            cardStyle({
+              flex: '0 0 158px',
+              minWidth: 150,
+              padding: '10px 10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              maxHeight: 520,
+              overflow: 'auto',
+            }),
+            h('div', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em', padding: '0 4px 6px' } }, '目录'),
+            (state.reportIndex || []).length === 0
+              ? h('div', { style: { fontSize: 11.5, color: C.sub, padding: '0 4px' } }, '还没有生成过报告')
+              : (state.reportIndex || []).map((entry) =>
+                  h(
+                    'div',
+                    {
+                      key: entry.id,
+                      onClick: () => {
+                        setKind(entry.kind)
+                        setKey(entry.periodKey)
+                      },
+                      style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: 12,
+                        padding: '5px 6px',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        background: entry.kind === kind && entry.periodKey === key ? C.brandSoft : 'transparent',
+                      },
+                    },
+                    h(
+                      'span',
+                      { style: { width: 30, color: C.sub, fontSize: 10.5 } },
+                      entry.kind === 'daily' ? '日' : entry.kind === 'weekly' ? '周' : '月',
+                    ),
+                    h('span', { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.periodKey),
+                    h(
+                      'span',
+                      {
+                        style: {
+                          width: 6,
+                          height: 6,
+                          borderRadius: 999,
+                          background: entry.status === 'submitted' ? C.ok : C.track,
+                        },
+                        title: entry.status === 'submitted' ? '已提交' : '草稿',
+                      },
+                    ),
+                  ),
+                ),
+          ),
           h(
             'div',
             cardStyle({
