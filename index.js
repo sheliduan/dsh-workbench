@@ -226,6 +226,11 @@ export function apply(ctx) {
     const level = input.level === 'week' || input.level === 'month' ? input.level : 'day'
     const status = input.status || 'todo'
     const day = input.date || todayKey()
+    const parentIds = Array.isArray(input.parentIds)
+      ? input.parentIds.filter(Boolean).map(String)
+      : input.parentId
+        ? [String(input.parentId)]
+        : []
     return {
       id: input.id || newId(),
       level,
@@ -239,7 +244,8 @@ export function apply(ctx) {
       priority: input.priority || 'mid',
       project: input.project ? String(input.project).trim() : '',
       goalId: input.goalId || null,
-      parentId: input.parentId || null,
+      parentId: parentIds[0] || null,
+      parentIds,
       estimateH: numberOrNull(input.estimateH),
       spentH: numberOrNull(input.spentH),
       dueDate: input.dueDate || null,
@@ -330,10 +336,19 @@ export function apply(ctx) {
     return state.goals.filter((goal) => goal.periodKey === monthKey)
   }
 
+  function parentsOf(item) {
+    if (Array.isArray(item.parentIds) && item.parentIds.length > 0) return item.parentIds
+    return item.parentId ? [item.parentId] : []
+  }
+
   function planLabelOf(item) {
-    if (!item.parentId) return '计划外'
-    const parent = state.items.find((entry) => entry.id === item.parentId)
-    return parent ? parent.title : '已删除的计划条目'
+    const parents = parentsOf(item)
+    if (parents.length === 0) return '计划外'
+    const titles = parents.map((id) => {
+      const parent = state.items.find((entry) => entry.id === id)
+      return parent ? parent.title : '已删除的计划条目'
+    })
+    return titles.join(' / ') || '计划外'
   }
 
   function groupByPlan(items) {
@@ -1478,8 +1493,72 @@ export function apply(ctx) {
         return send(res, 200, { ok: true, state: snapshot() })
       }
       if (action === '/schedule/run') {
+        const before = (state.reports || []).filter((report) => report.status === 'draft' && !report.ack).length
         await tick()
-        return send(res, 200, { ok: true, state: snapshot() })
+        const after = (state.reports || []).filter((report) => report.status === 'draft' && !report.ack).length
+        return send(res, 200, { ok: true, created: Math.max(0, after - before), state: snapshot() })
+      }
+      if (action === '/dws/selftest') {
+        const steps = []
+        let status = null
+        try {
+          const raw = await runDws(['auth', 'status', '--format', 'json'])
+          status = {
+            authenticated: Boolean(raw.authenticated),
+            tokenValid: Boolean(raw.token_valid),
+            userName: raw.user_name || '',
+            corpName: raw.corp_name || '',
+            expiresAt: raw.expires_at || '',
+          }
+          steps.push({
+            name: 'dws 登录态',
+            ok: status.authenticated && status.tokenValid,
+            detail:
+              (status.userName || '未知用户') +
+              ' @ ' +
+              (status.corpName || '未知组织') +
+              (status.expiresAt ? '（至 ' + String(status.expiresAt).slice(0, 16).replace('T', ' ') + '）' : ''),
+          })
+        } catch (error) {
+          steps.push({ name: 'dws 登录态', ok: false, detail: String((error && error.message) || error) })
+          return send(res, 200, { ok: true, allOk: false, steps, status: null })
+        }
+
+        const ding = dingtalkSettings()
+        steps.push({
+          name: '日志模板',
+          ok: Boolean(ding.templateId),
+          detail: ding.templateId
+            ? (ding.templateName || ding.templateId) + '（' + (ding.fields || []).length + ' 个字段）'
+            : '尚未选择模板',
+        })
+        const recipients = ding.recipients || []
+        steps.push({
+          name: '接收人',
+          ok: recipients.length > 0,
+          detail: recipients.length ? recipients.map((person) => person.name).join('、') : '未设置接收人',
+        })
+        if (ding.templateId && recipients.length > 0) {
+          try {
+            const preview = await submitReport(
+              {
+                kind: 'daily',
+                key: todayKey(),
+                toUserIds: recipients.map((person) => person.userId),
+                risks: '（连通性测试）',
+              },
+              true,
+            )
+            steps.push({
+              name: '提交演练（dry-run）',
+              ok: true,
+              detail: '将提交 ' + preview.contents.length + ' 个字段，未真正发送',
+            })
+          } catch (error) {
+            steps.push({ name: '提交演练（dry-run）', ok: false, detail: String((error && error.message) || error) })
+          }
+        }
+        return send(res, 200, { ok: true, allOk: steps.every((step) => step.ok), steps, status })
       }
       if (action === '/report/ack') {
         const report = state.reports.find((entry) => entry.id === body.id)

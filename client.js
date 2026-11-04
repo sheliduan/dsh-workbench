@@ -574,6 +574,118 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function isWeekend(dateStr) {
+      if (!dateStr) return false
+      const day = new Date(dateStr + 'T00:00:00').getDay()
+      return day === 0 || day === 6
+    }
+
+    function MultiSelect({ values, options, onChange, placeholder }) {
+      const [open, setOpen] = useState(false)
+      const ref = React.useRef(null)
+
+      useEffect(() => {
+        if (!open) return undefined
+        const onDoc = (event) => {
+          if (ref.current && !ref.current.contains(event.target)) setOpen(false)
+        }
+        document.addEventListener('mousedown', onDoc)
+        return () => document.removeEventListener('mousedown', onDoc)
+      }, [open])
+
+      const selected = options.filter((option) => (values || []).indexOf(String(option.value)) >= 0)
+
+      return h(
+        'div',
+        { ref, style: { position: 'relative' } },
+        h(
+          'div',
+          {
+            onClick: () => setOpen(!open),
+            style: {
+              minHeight: 34,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 4,
+              alignItems: 'center',
+              padding: '4px 8px',
+              border: '1px solid ' + (open ? C.brandLine : C.line),
+              borderRadius: 10,
+              cursor: 'pointer',
+              background: open ? C.brandSoft : 'transparent',
+            },
+          },
+          selected.length === 0
+            ? h('span', { style: { fontSize: 13, color: C.sub } }, placeholder || '选择…')
+            : selected.map((option) =>
+                h(
+                  'span',
+                  {
+                    key: option.value,
+                    style: { padding: '1px 8px', borderRadius: 999, background: C.brandSoft, fontSize: 11.5, color: C.text },
+                  },
+                  option.label,
+                ),
+              ),
+          h(
+            'span',
+            { style: { marginLeft: 'auto', fontSize: 8, color: C.sub, transform: open ? 'rotate(180deg)' : 'none' } },
+            '▼',
+          ),
+        ),
+        open
+          ? h(
+              'div',
+              {
+                style: {
+                  position: 'absolute',
+                  zIndex: 60,
+                  top: 40,
+                  left: 0,
+                  right: 0,
+                  maxHeight: 220,
+                  overflow: 'auto',
+                  background: C.panel,
+                  borderRadius: 12,
+                  boxShadow: '0 14px 36px rgba(0,0,0,.18)',
+                  padding: 4,
+                },
+              },
+              options.map((option) => {
+                const active = (values || []).indexOf(String(option.value)) >= 0
+                return h(
+                  'div',
+                  {
+                    key: option.value,
+                    onMouseDown: (event) => {
+                      event.preventDefault()
+                      const key = String(option.value)
+                      onChange(active ? (values || []).filter((value) => value !== key) : (values || []).concat(key))
+                    },
+                    style: {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '7px 10px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      background: active ? C.brandSoft : 'transparent',
+                    },
+                  },
+                  h('span', { style: { width: 14, color: active ? C.brand : C.sub } }, active ? '☑' : '☐'),
+                  h(
+                    'span',
+                    { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+                    option.label,
+                  ),
+                )
+              }),
+            )
+          : null,
+      )
+    }
+
     function TrendChart({ state }) {
       const days = []
       for (let offset = 6; offset >= 0; offset -= 1) {
@@ -653,6 +765,12 @@ window.__ModuleLoader__.load({
         project: (initial && initial.project) || '',
         priority: (initial && initial.priority) || 'mid',
         parentId: (initial && initial.parentId) || '',
+        parentIds:
+          initial && Array.isArray(initial.parentIds)
+            ? initial.parentIds.map(String)
+            : initial && initial.parentId
+              ? [String(initial.parentId)]
+              : [],
         goalId: (initial && initial.goalId) || '',
         status: (initial && initial.status) || 'todo',
         note: (initial && initial.note) || '',
@@ -735,7 +853,8 @@ window.__ModuleLoader__.load({
           spentH: draft.spentH,
           project: draft.project,
           priority: draft.priority,
-          parentId: draft.parentId || null,
+          parentId: (draft.parentIds || [])[0] || null,
+          parentIds: draft.parentIds || [],
           goalId: draft.goalId || null,
           status: draft.status,
           note: draft.note,
@@ -903,13 +1022,12 @@ window.__ModuleLoader__.load({
                 { style: { display: 'flex', gap: 10 } },
                 h(
                   Field,
-                  { label: '归属周条目', grow: true },
-                  h(Select, {
-                    value: draft.parentId || '',
-                    onChange: (next) => setDraft({ ...draft, parentId: next }),
-                    options: [{ value: '', label: '不归属（计划外）' }].concat(
-                      weekItems.map((item) => ({ value: item.id, label: item.title })),
-                    ),
+                  { label: '归属周条目（可多选）', grow: true },
+                  h(MultiSelect, {
+                    values: draft.parentIds || [],
+                    onChange: (next) => setDraft({ ...draft, parentIds: next }),
+                    placeholder: '不归属（计划外）',
+                    options: weekItems.map((item) => ({ value: item.id, label: item.title })),
                   }),
                 ),
               )
@@ -1076,6 +1194,23 @@ window.__ModuleLoader__.load({
           item.title,
         ),
         h('span', { style: { fontSize: 11, color: priorityColor, minWidth: 14 } }, priorityLabel),
+        item.level === 'day' && isWeekend(item.date)
+          ? h(
+              'span',
+              {
+                title: '周末工作，自动记为加班',
+                style: {
+                  fontSize: 10,
+                  color: C.warn,
+                  border: '1px solid ' + C.warn,
+                  borderRadius: 4,
+                  padding: '0 4px',
+                  lineHeight: 1.5,
+                },
+              },
+              '加班',
+            )
+          : null,
         item.link && item.link.issueIid ? h('span', { style: { fontSize: 11, color: C.sub } }, '#' + item.link.issueIid) : null,
         h(
           'span',
@@ -1409,10 +1544,20 @@ window.__ModuleLoader__.load({
               Btn,
               {
                 small: true,
-                onClick: () =>
-                  mutate('/item/rollover', { date: today }).then((payload) =>
-                    notify(payload.moved ? `已顺延 ${payload.moved} 条到 ${payload.target}` : '没有需要顺延的任务'),
-                  ),
+                onClick: () => {
+                  const open = items.filter((item) => item.status !== 'done' && item.status !== 'dropped')
+                  if (open.length === 0) {
+                    notify('今天没有未完成的任务')
+                    return
+                  }
+                  if (!window.confirm('把今天 ' + open.length + ' 条未完成任务顺延到明天？\n（会修改这些任务的日期，可再次手动改回）')) {
+                    return
+                  }
+                  mutate('/item/rollover', { date: today }).then(
+                    (payload) => notify(payload.moved ? `已顺延 ${payload.moved} 条到 ${payload.target}` : '没有需要顺延的任务'),
+                    (cause) => notify(String(cause.message || cause), 'error'),
+                  )
+                },
               },
               '顺延未完成',
             ),
@@ -1847,12 +1992,15 @@ window.__ModuleLoader__.load({
         const donePlanned = done.filter((item) => item.parentId)
         const offPlan = done.filter((item) => !item.parentId)
         const ratios = done.filter((item) => item.estimateH && item.spentH).map((item) => item.spentH / item.estimateH)
+        const weekend = days.filter((item) => isWeekend(item.date))
         return {
           rate: planned.length ? Math.round((donePlanned.length / planned.length) * 100) : null,
           plannedCount: planned.length,
           offPlanRate: done.length ? Math.round((offPlan.length / done.length) * 100) : null,
           doneCount: done.length,
           deviation: median(ratios),
+          overtimeCount: weekend.length,
+          overtimeHours: round1(weekend.reduce((sum, item) => sum + (item.spentH || 0), 0)),
         }
       }, [series, state.items])
 
@@ -1893,6 +2041,11 @@ window.__ModuleLoader__.load({
             label: '估算偏差',
             value: metrics.deviation === null ? '—' : round1(metrics.deviation) + '×',
             hint: '实际 ÷ 预估 的中位数',
+          }),
+          h(StatCard, {
+            label: '周末加班',
+            value: metrics.overtimeHours + 'h',
+            hint: metrics.overtimeCount ? `${metrics.overtimeCount} 条周末任务` : '本周没有周末任务',
           }),
         ),
         h(
@@ -2139,6 +2292,9 @@ window.__ModuleLoader__.load({
           value: text,
           rows: 6,
           onChange: (event) => setText(event.target.value),
+          onBlur: () => {
+            if (text !== current) save()
+          },
           placeholder: '　· 未完成的 xxx\n　· 明日：xxx',
           style: inputStyle({ resize: 'vertical', minHeight: 120, fontFamily: 'inherit' }),
         }),
@@ -2176,16 +2332,19 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: 6 } },
+        cardStyle({ flex: '1 1 260px', minWidth: 240, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }),
         h(
           'div',
-          { style: { fontSize: 12, color: C.sub } },
+          { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } },
           kind === 'weekly' ? '本周目标推进 / 小结（手写）' : '本月目标达成（手写）',
         ),
         h('textarea', {
           value: text,
           rows: 8,
           onChange: (event) => setText(event.target.value),
+          onBlur: () => {
+            if (text !== saved) save()
+          },
           placeholder: '例如：合同模块二期进入联调，接口可用性从 82% 提升到 88%；下月重点是试点上线。',
           style: inputStyle({ resize: 'vertical', minHeight: 130 }),
         }),
@@ -2356,23 +2515,32 @@ window.__ModuleLoader__.load({
           { style: { display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' } },
           h(
             'div',
-            {
-              style: {
-                flex: '2 1 420px',
-                border: '1px solid ' + C.line,
-                borderRadius: 10,
-                padding: '14px 16px',
-                background: C.soft,
-                minHeight: 200,
-              },
-            },
+            cardStyle({
+              flex: '2 1 460px',
+              minWidth: 320,
+              padding: '14px 18px',
+              minHeight: 240,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }),
+            h(
+              'div',
+              { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+              h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, '报告预览'),
+              h(
+                'span',
+                { style: { marginLeft: 'auto', fontSize: 11, color: C.sub } },
+                (report ? report.markdown.length : 0) + ' 字',
+              ),
+            ),
             h('pre', {
               style: {
                 margin: 0,
                 whiteSpace: 'pre-wrap',
                 fontFamily: 'inherit',
                 fontSize: 12.5,
-                lineHeight: 1.75,
+                lineHeight: 1.85,
                 color: C.text,
               },
             }, report ? report.markdown : '生成中…'),
@@ -2383,17 +2551,26 @@ window.__ModuleLoader__.load({
           kind === 'daily' && report
             ? h(
                 'div',
-                { style: { flex: '1 1 240px', display: 'flex', flexDirection: 'column', gap: 6 } },
-                h('div', { style: { fontSize: 12, color: C.sub } }, '提交钉钉时的字段映射'),
-                report.fields.map((field) =>
-                  h(
-                    'div',
-                    {
-                      key: field.name,
-                      style: { border: '1px solid ' + C.line, borderRadius: 8, padding: '8px 10px' },
-                    },
-                    h('div', { style: { fontSize: 11, color: C.sub } }, field.name),
+                cardStyle({
+                  flex: '0 1 250px',
+                  minWidth: 210,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }),
+                h('div', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, '提交钉钉的字段'),
+                report.fields
+                  .filter((field) => field.name !== '未完成工作和明天计划')
+                  .map((field) =>
                     h(
+                      'div',
+                      {
+                        key: field.name,
+                        style: { borderRadius: 10, padding: '8px 10px', background: C.soft },
+                      },
+                      h('div', { style: { fontSize: 10.5, color: C.sub } }, field.name),
+                      h(
                       'div',
                       {
                         style: {
@@ -2410,8 +2587,8 @@ window.__ModuleLoader__.load({
                 ),
                 h(
                   'div',
-                  { style: { fontSize: 11, color: C.sub } },
-                  '要真正提交，点上方「提交钉钉」；接收人与字段映射在「插件 → 工作台 → 配置」里设置。',
+                  { style: { fontSize: 10.5, color: C.sub, lineHeight: 1.5 } },
+                  '「未完成工作和明天计划」在上方框内编辑，这里不再重复；接收人在「插件 → 工作台 → 配置」里设置。',
                 ),
               )
             : null,
@@ -2866,6 +3043,8 @@ window.__ModuleLoader__.load({
       const [root, setRoot] = useState((state.settings && state.settings.exportRoot) || '')
       const initialSchedule = (state.settings && state.settings.schedule) || {}
       const [scheduleEnabled, setScheduleEnabled] = useState(initialSchedule.enabled !== false)
+      const [probe, setProbe] = useState(null)
+      const [probing, setProbing] = useState(false)
       const [weekdayTime, setWeekdayTime] = useState(initialSchedule.weekdayTime || '18:00')
       const [fridayTime, setFridayTime] = useState(initialSchedule.fridayTime || '18:00')
       const [weeklyOnFriday, setWeeklyOnFriday] = useState(initialSchedule.weeklyOnFriday !== false)
@@ -2960,17 +3139,55 @@ window.__ModuleLoader__.load({
               onClick: () =>
                 mutate('/settings/save', {
                   exportRoot: root,
-                  recipients,
                   schedule: { enabled: scheduleEnabled, weekdayTime, fridayTime, weeklyOnFriday },
                 })
                   .then(() => call('/schedule/run'))
                   .then(
-                    () => notify('已保存并试跑一次定时任务'),
+                    (payload) =>
+                      notify(
+                        payload && payload.created > 0
+                          ? '已保存，并生成 ' + payload.created + ' 份草稿'
+                          : '已保存；今天已生成过草稿，未重复生成',
+                      ),
                     (cause) => notify(String(cause.message || cause), 'error'),
                   ),
             },
             '保存并立即试跑',
           ),
+          h(
+            Btn,
+            {
+              small: true,
+              disabled: probing,
+              onClick: () => {
+                setProbing(true)
+                setProbe(null)
+                call('/dws/selftest')
+                  .then((payload) => {
+                    setProbe(payload)
+                    notify(payload.allOk ? '钉钉链路正常' : '钉钉链路有问题，见下方明细', payload.allOk ? undefined : 'error')
+                  })
+                  .catch((cause) => notify(String(cause.message || cause), 'error'))
+                  .finally(() => setProbing(false))
+              },
+            },
+            probing ? '检测中…' : '测试钉钉连通性',
+          ),
+          probe
+            ? h(
+                'div',
+                { style: { display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4 } },
+                (probe.steps || []).map((step) =>
+                  h(
+                    'div',
+                    { key: step.name, style: { display: 'flex', gap: 8, fontSize: 12, alignItems: 'baseline' } },
+                    h('span', { style: { color: step.ok ? C.ok : C.danger } }, step.ok ? '✓' : '✕'),
+                    h('span', { style: { width: 120, color: C.sub } }, step.name),
+                    h('span', { style: { flex: 1, whiteSpace: 'pre-wrap' } }, step.detail),
+                  ),
+                ),
+              )
+            : null,
         ),
         h('div', { style: { fontSize: 11, color: C.sub } }, '数据文件：' + (state.dataFile || '')),
       )
