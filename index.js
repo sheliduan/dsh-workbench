@@ -85,6 +85,12 @@ function shortDate(dateStr) {
   return dateStr.slice(5).replace('-', '/')
 }
 
+function isWeekendKey(dateStr) {
+  if (!dateStr) return false
+  const day = new Date(dateStr + 'T00:00:00').getDay()
+  return day === 0 || day === 6
+}
+
 function numberOrNull(value) {
   if (value === null || value === undefined || value === '') return null
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
@@ -1491,6 +1497,63 @@ export function apply(ctx) {
         if (state.narratives) delete state.narratives[narrativeKey]
         await save()
         return send(res, 200, { ok: true, state: snapshot() })
+      }
+      if (action === '/ai/summary') {
+        const llm = ctx.get('llm')
+        if (!llm) throw new Error('当前环境没有可用的模型服务')
+        const defaults = ctx.get('agentDefaultModel')
+        const selection = defaults ? defaults.currentSelection() : null
+        const provider = selection && selection.provider
+        const model = selection && selection.model
+        if (!provider || !model) throw new Error('无法确定默认模型，请先在 DSH 设置里选择模型')
+        const kind = body.kind || 'daily'
+        const key = body.key || todayKey()
+        const days = itemsOfPeriod(kind, key)
+        const done = days.filter((item) => item.status === 'done')
+        const open = days.filter((item) => item.status !== 'done' && item.status !== 'dropped')
+        const payload = {
+          周期: key,
+          完成任务: done.map((item) => ({
+            标题: item.title,
+            工时: item.spentH ?? item.estimateH ?? null,
+            计划: planLabelOf(item),
+            周末加班: isWeekendKey(item.date),
+          })),
+          未完成: open.map((item) => item.title),
+          总工时: buildReport(kind, key).sections.hours,
+        }
+        const system =
+          kind === 'daily'
+            ? '你是一名严谨的中文工作助理。根据给定的当日任务数据，写一段“今日小结”，60-120 字。只写事实与结论，不要寒暄，不要用列表符号，不要编造数据里没有的内容。'
+            : '你是一名严谨的中文工作助理。根据给定的周期任务数据，写一段“目标推进 / 小结”，120-200 字，概括进展、风险与下一步重点。不要寒暄，不要编造数据里没有的内容。'
+        let text = ''
+        let failure = null
+        for await (const chunk of llm.stream({
+          provider,
+          model,
+          system,
+          maxTokens: 700,
+          temperature: 0.3,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: '数据（JSON）：\n' + JSON.stringify(payload, null, 2) + '\n\n请直接输出正文，不要解释。',
+                },
+              ],
+            },
+          ],
+        })) {
+          if (chunk.type === 'text-delta') text += chunk.text
+          else if (chunk.type === 'finish' && chunk.reason && chunk.reason.kind === 'error') {
+            failure = chunk.reason.failure
+          }
+        }
+        if (failure) throw new Error('模型调用失败：' + (failure.message || failure.code))
+        if (!text.trim()) throw new Error('模型没有返回内容')
+        return send(res, 200, { ok: true, text: text.trim(), provider, model })
       }
       if (action === '/schedule/run') {
         const before = (state.reports || []).filter((report) => report.status === 'draft' && !report.ack).length

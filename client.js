@@ -2502,7 +2502,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function DocSection({ title, hint, children, accent }) {
+    function DocSection({ title, hint, children, accent, extra }) {
       return h(
         'section',
         { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
@@ -2522,6 +2522,7 @@ window.__ModuleLoader__.load({
             title,
           ),
           hint ? h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, hint) : null,
+          extra || null,
         ),
         children,
       )
@@ -2535,6 +2536,8 @@ window.__ModuleLoader__.load({
       const [submitOpen, setSubmitOpen] = useState(false)
       const [leftText, setLeftText] = useState('')
       const [goalsText, setGoalsText] = useState('')
+      const [aiBusy, setAiBusy] = useState(false)
+      const [aiPreview, setAiPreview] = useState(null)
       const lastLeft = React.useRef('')
       const lastGoals = React.useRef('')
 
@@ -2587,6 +2590,34 @@ window.__ModuleLoader__.load({
           notify(String(cause.message || cause), 'error')
         }
       }
+
+      const runAi = useCallback(
+        async (field) => {
+          setAiBusy(true)
+          try {
+            const payload = await call('/ai/summary', { kind, key })
+            setAiPreview({ text: payload.text, field })
+          } catch (cause) {
+            notify(String(cause.message || cause), 'error')
+          } finally {
+            setAiBusy(false)
+          }
+        },
+        [kind, key, notify],
+      )
+
+      const applyAi = useCallback(async () => {
+        if (!aiPreview) return
+        const { text, field } = aiPreview
+        setAiPreview(null)
+        if (field === 'left') {
+          setLeftText(text)
+          await saveField('left', text, lastLeft.current, '未完成段')
+        } else {
+          setGoalsText(text)
+          await saveField('goals', text, lastGoals.current, '目标推进')
+        }
+      }, [aiPreview, saveField])
 
       const resetDefaults = useCallback(async () => {
         setBusy(true)
@@ -2716,7 +2747,16 @@ window.__ModuleLoader__.load({
           kind !== 'daily'
             ? h(
                 DocSection,
-                { title: '一、目标推进 / 小结', hint: '可直接编辑，失焦自动保存', accent: true },
+                {
+                  title: '一、目标推进 / 小结',
+                  hint: '可直接编辑，失焦自动保存',
+                  accent: true,
+                  extra: h(
+                    Btn,
+                    { small: true, onClick: () => runAi('goals'), disabled: aiBusy },
+                    aiBusy ? '生成中…' : 'AI 生成',
+                  ),
+                },
                 h(InlineArea, {
                   value: goalsText,
                   onChange: setGoalsText,
@@ -2780,6 +2820,11 @@ window.__ModuleLoader__.load({
               title: kind === 'daily' ? '三、未完成工作和明天计划' : '四、未完成 / 下一步计划',
               hint: '可直接编辑，失焦自动保存',
               accent: true,
+              extra: h(
+                Btn,
+                { small: true, onClick: () => runAi('left'), disabled: aiBusy },
+                aiBusy ? '生成中…' : 'AI 生成',
+              ),
             },
             h(InlineArea, {
               value: leftText,
@@ -2816,6 +2861,41 @@ window.__ModuleLoader__.load({
 
         submitOpen && report
           ? h(SubmitModal, { state, report, onClose: () => setSubmitOpen(false), notify })
+          : null,
+        aiPreview
+          ? h(
+              Modal,
+              {
+                title: 'AI 生成的小结',
+                width: 560,
+                onClose: () => setAiPreview(null),
+                footer: h(
+                  'div',
+                  { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
+                  h(Btn, { onClick: () => setAiPreview(null) }, '取消'),
+                  h(Btn, { primary: true, onClick: applyAi }, '替换这段'),
+                ),
+              },
+              h(
+                'div',
+                { style: { fontSize: 11, color: C.sub } },
+                '确认后会替换到「' + (aiPreview.field === 'left' ? '未完成段' : '目标推进') + '」并自动保存；原内容会被覆盖。',
+              ),
+              h(
+                'div',
+                {
+                  style: {
+                    border: '1px solid ' + C.line,
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontSize: 13,
+                    lineHeight: 1.85,
+                    whiteSpace: 'pre-wrap',
+                  },
+                },
+                aiPreview.text,
+              ),
+            )
           : null,
       )
     }
