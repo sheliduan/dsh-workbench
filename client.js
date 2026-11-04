@@ -140,33 +140,39 @@ window.__ModuleLoader__.load({
     function Icon({ size }) {
       return h(
         'svg',
-        { width: size, height: size, viewBox: '0 0 24 24', 'aria-hidden': true, style: { display: 'block' } },
-        h('rect', { width: 24, height: 24, rx: 6, fill: 'currentColor', opacity: 0.14 }),
+        {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          'aria-hidden': true,
+          style: { display: 'block', borderRadius: 7, overflow: 'hidden' },
+        },
+        h(
+          'defs',
+          null,
+          h(
+            'linearGradient',
+            { id: 'wbIconGrad', x1: '0', y1: '0', x2: '1', y2: '1' },
+            h('stop', { offset: '0', stopColor: '#10B981' }),
+            h('stop', { offset: '1', stopColor: '#22D3EE' }),
+          ),
+        ),
+        h('rect', { width: 24, height: 24, rx: 7, fill: 'url(#wbIconGrad)' }),
+        h('rect', { x: 6.2, y: 5.2, width: 11.6, height: 2.1, rx: 1.05, fill: '#ffffff', opacity: 0.92 }),
         h('path', {
-          d: 'M5.6 7.9l1.5 1.5 2.8-2.8',
+          d: 'M7.4 12.2l2.1 2.1 4.4-4.4',
           fill: 'none',
-          stroke: 'currentColor',
-          strokeWidth: 1.7,
+          stroke: '#ffffff',
+          strokeWidth: 2,
           strokeLinecap: 'round',
           strokeLinejoin: 'round',
         }),
-        h('path', { d: 'M13.4 7.6h5', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' }),
         h('path', {
-          d: 'M5.6 13.9l1.5 1.5 2.8-2.8',
-          fill: 'none',
-          stroke: 'currentColor',
-          strokeWidth: 1.7,
+          d: 'M7.4 17.6h8.6',
+          stroke: '#ffffff',
+          strokeWidth: 2,
           strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-          opacity: 0.6,
-        }),
-        h('path', {
-          d: 'M13.4 13.6h5',
-          fill: 'none',
-          stroke: 'currentColor',
-          strokeWidth: 1.7,
-          strokeLinecap: 'round',
-          opacity: 0.6,
+          opacity: 0.68,
         }),
       )
     }
@@ -1106,51 +1112,32 @@ window.__ModuleLoader__.load({
               )
             : null,
           h(
-            'button',
-            {
-              onClick: () => setAdvanced(!advanced),
-              style: {
-                border: 'none',
-                background: 'transparent',
-                color: C.sub,
-                cursor: 'pointer',
-                fontSize: 12,
-                textAlign: 'left',
-                padding: 0,
-                fontFamily: 'inherit',
-              },
-            },
-            (advanced ? '▾ ' : '▸ ') + '更多（' + (isDay ? '状态 / 实际工时' : '截止日 / 状态 / 实际完成时间') + '）',
-          ),
-          advanced
-            ? h(
-                'div',
-                { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
-                isDay
-                  ? null
-                  : h(Field, { label: '截止日', grow: true }, h(TextInput, {
-                      type: 'date',
-                      value: draft.dueDate,
-                      onChange: (next) => setDraft({ ...draft, dueDate: next }),
-                    })),
-                h(Field, { label: '状态', grow: true }, h(Select, {
-                  value: draft.status,
-                  onChange: (next) => setDraft({ ...draft, status: next }),
-                  options: Object.keys(STATUS).map((key) => ({ value: key, label: STATUS[key] })),
+            'div',
+            { style: { display: 'flex', gap: 10, flexWrap: 'wrap', paddingTop: 2 } },
+            isDay
+              ? null
+              : h(Field, { label: '截止日', grow: true }, h(TextInput, {
+                  type: 'date',
+                  value: draft.dueDate,
+                  onChange: (next) => setDraft({ ...draft, dueDate: next }),
                 })),
-                isDay
-                  ? h(Field, { label: '实际工时 (h)', grow: true }, h(TextInput, {
-                      value: draft.spentH,
-                      onChange: (next) => setDraft({ ...draft, spentH: next }),
-                      placeholder: '1.5 或 90m',
-                    }))
-                  : h(Field, { label: '实际完成时间', grow: true }, h(TextInput, {
-                      type: 'date',
-                      value: draft.finishedAt || '',
-                      onChange: (next) => setDraft({ ...draft, finishedAt: next }),
-                    })),
-              )
-            : null,
+            h(Field, { label: '状态', grow: true }, h(Select, {
+              value: draft.status,
+              onChange: (next) => setDraft({ ...draft, status: next }),
+              options: Object.keys(STATUS).map((key) => ({ value: key, label: STATUS[key] })),
+            })),
+            isDay
+              ? h(Field, { label: '实际工时 (h)', grow: true }, h(TextInput, {
+                  value: draft.spentH,
+                  onChange: (next) => setDraft({ ...draft, spentH: next }),
+                  placeholder: '1.5 或 90m',
+                }))
+              : h(Field, { label: '实际完成时间', grow: true }, h(TextInput, {
+                  type: 'date',
+                  value: draft.finishedAt || '',
+                  onChange: (next) => setDraft({ ...draft, finishedAt: next }),
+                })),
+          ),
           h('div', { style: { fontSize: 11, color: C.sub } }, 'Ctrl/⌘ + Enter 保存，Esc 关闭'),
         ),
       )
@@ -2244,20 +2231,25 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function LeftEditor({ report, kind, key, notify, onSaved }) {
+    function LeftEditor({ report, kind, periodKey, notify, onSaved }) {
       const current = report.sections.left
       const overridden = Boolean(report.overrides && report.overrides.left)
       const [text, setText] = useState(current)
       const [busy, setBusy] = useState(false)
+      const lastSaved = React.useRef(current)
 
       useEffect(() => {
         setText(current)
-      }, [current, kind, key])
+        lastSaved.current = current
+      }, [current, kind, periodKey])
 
       const save = async () => {
+        if (busy) return
+        if (text === lastSaved.current) return
         setBusy(true)
         try {
-          await call('/narrative/save', { kind, key, field: 'left', text })
+          await call('/narrative/save', { kind, key: periodKey, field: 'left', text })
+          lastSaved.current = text
           if (onSaved) onSaved()
           notify('已保存「未完成工作和明天计划」')
         } catch (cause) {
@@ -2270,7 +2262,7 @@ window.__ModuleLoader__.load({
       const reset = async () => {
         setBusy(true)
         try {
-          await call('/narrative/clear', { kind, key, field: 'left' })
+          await call('/narrative/clear', { kind, key: periodKey, field: 'left' })
           if (onSaved) onSaved()
           notify('已恢复为自动汇总')
         } catch (cause) {
@@ -2308,19 +2300,24 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function NarrativePanel({ state, kind, key, notify, onSaved }) {
-      const saved = (state.narratives && state.narratives[kind + ':' + key]) || ''
+    function NarrativePanel({ state, kind, periodKey, notify, onSaved }) {
+      const saved = (state.narratives && state.narratives[kind + ':' + periodKey]) || ''
       const [text, setText] = useState(saved)
       const [busy, setBusy] = useState(false)
+      const lastSaved = React.useRef(saved)
 
       useEffect(() => {
         setText(saved)
-      }, [saved, kind, key])
+        lastSaved.current = saved
+      }, [saved, kind, periodKey])
 
       const save = async () => {
+        if (busy) return
+        if (text === lastSaved.current) return
         setBusy(true)
         try {
-          await call('/narrative/save', { kind, key, text })
+          await call('/narrative/save', { kind, key: periodKey, text })
+          lastSaved.current = text
           if (onSaved) onSaved()
           notify('已保存目标推进')
         } catch (cause) {
@@ -2546,7 +2543,7 @@ window.__ModuleLoader__.load({
             }, report ? report.markdown : '生成中…'),
           ),
           kind === 'daily' && report
-            ? h(LeftEditor, { report, kind, key, notify, onSaved: load })
+            ? h(LeftEditor, { report, kind, periodKey: key, notify, onSaved: load })
             : null,
           kind === 'daily' && report
             ? h(
@@ -2592,7 +2589,7 @@ window.__ModuleLoader__.load({
                 ),
               )
             : null,
-          kind !== 'daily' ? h(NarrativePanel, { state, kind, key, notify, onSaved: load }) : null,
+          kind !== 'daily' ? h(NarrativePanel, { state, kind, periodKey: key, notify, onSaved: load }) : null,
           submitOpen && report
             ? h(SubmitModal, { state, report, onClose: () => setSubmitOpen(false), notify })
             : null,
@@ -3141,7 +3138,7 @@ window.__ModuleLoader__.load({
                   exportRoot: root,
                   schedule: { enabled: scheduleEnabled, weekdayTime, fridayTime, weeklyOnFriday },
                 })
-                  .then(() => call('/schedule/run'))
+                  .then(() => call('/schedule/run', {}))
                   .then(
                     (payload) =>
                       notify(
@@ -3162,7 +3159,7 @@ window.__ModuleLoader__.load({
               onClick: () => {
                 setProbing(true)
                 setProbe(null)
-                call('/dws/selftest')
+                call('/dws/selftest', {})
                   .then((payload) => {
                     setProbe(payload)
                     notify(payload.allOk ? '钉钉链路正常' : '钉钉链路有问题，见下方明细', payload.allOk ? undefined : 'error')
