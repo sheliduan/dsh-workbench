@@ -7,7 +7,8 @@
 import path from 'node:path'
 import { mkdir, readFile, writeFile, readdir, unlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { execFile } from 'node:child_process'
+import os from 'node:os'
+import { execFile, spawn } from 'node:child_process'
 
 export const name = 'workbench'
 export const inject = ['webServer', 'workingDirectory']
@@ -1066,6 +1067,114 @@ export function apply(ctx) {
     })
   }
 
+  function stripAnsi(text) {
+    return String(text || '')
+      .replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '')
+      .replace(/[\u2500-\u25ff]/g, '')
+  }
+
+  let loginSession = null
+
+  function loginSnapshot() {
+    if (!loginSession) return { state: 'idle', userCode: '', url: '', detail: '', expiresAt: null, alive: false }
+    return {
+      state: loginSession.state,
+      userCode: loginSession.userCode,
+      url: loginSession.url,
+      detail: loginSession.detail,
+      expiresAt: loginSession.expiresAt,
+      alive: !loginSession.exited,
+    }
+  }
+
+  async function startDwsLogin() {
+    if (loginSession && !loginSession.exited) return loginSnapshot()
+    const launcher = await dwsLauncher()
+    const args = ['auth', 'login', '--device']
+    const child =
+      launcher.kind === 'node'
+        ? spawn(launcher.nodeExe, [launcher.dwsJs, ...args], { windowsHide: true })
+        : spawn(launcher.command, args, { shell: true, windowsHide: true })
+
+    const session = {
+      child,
+      userCode: '',
+      url: '',
+      state: 'pending',
+      detail: '正在请求设备授权码…',
+      startedAt: Date.now(),
+      expiresAt: new Date(Date.now() + 900 * 1000).toISOString(),
+      exited: false,
+    }
+    loginSession = session
+
+    let buffer = Buffer.alloc(0)
+    const onData = (chunk) => {
+      buffer = Buffer.concat([buffer, chunk])
+      if (buffer.length > 64 * 1024) buffer = buffer.subarray(buffer.length - 32 * 1024)
+      let text = ''
+      try {
+        text = new TextDecoder('gbk').decode(buffer)
+      } catch (error) {
+        text = buffer.toString('utf8')
+      }
+      text = stripAnsi(text)
+      if (!session.userCode) {
+        const fromUrl = text.match(/user_code=([A-Z0-9]{4,8}-[A-Z0-9]{4,8})/i)
+        if (fromUrl) session.userCode = fromUrl[1].toUpperCase()
+      }
+      if (!session.userCode) {
+        const hit = text.match(/授权码[:：]?\s*([A-Z0-9]{4,8}-[A-Z0-9]{4,8})/i)
+        if (hit) session.userCode = hit[1].toUpperCase()
+      }
+      if (!session.url) {
+        const hit = text.match(/https:\/\/login\.dingtalk\.com\/oauth2\/device\/verify\.htm\S+/)
+        if (hit) session.url = hit[0]
+      }
+      if (session.userCode && session.url) session.detail = '等待钉钉授权…'
+    }
+    child.stdout.on('data', onData)
+    child.stderr.on('data', onData)
+
+    child.on('error', (error) => {
+      session.exited = true
+      session.state = 'failed'
+      session.detail = '无法启动 dws：' + String(error.message || error)
+    })
+    child.on('exit', (code) => {
+      session.exited = true
+      if (code === 0) {
+        session.state = 'ok'
+        session.detail = '授权成功'
+      } else if (session.state !== 'ok') {
+        session.state = 'failed'
+        session.detail = '授权未完成（退出码 ' + code + '）'
+      }
+    })
+
+    const deadline = Date.now() + 20000
+    while (Date.now() < deadline) {
+      if ((session.userCode && session.url) || session.exited) return loginSnapshot()
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    }
+    session.detail = session.userCode ? '等待钉钉授权…' : '没有拿到授权码，请重试'
+    return loginSnapshot()
+  }
+
+  async function stopDwsLogin() {
+    if (loginSession && !loginSession.exited && loginSession.child) {
+      try {
+        loginSession.child.kill()
+      } catch (error) {
+        // 忽略
+      }
+      loginSession.exited = true
+      loginSession.state = 'idle'
+      loginSession.detail = '已取消'
+    }
+    return loginSnapshot()
+  }
+
   function dingtalkSettings() {
     return state.settings.dingtalk || {}
   }
@@ -1626,6 +1735,27 @@ export function apply(ctx) {
         state.settings = normalizeSettings({ ...(state.settings || {}), ...body })
         await save()
         return send(res, 200, { ok: true, settings: state.settings, state: snapshot() })
+      }
+      if (action === '/dws/login/start') {
+        const snapshot = await startDwsLogin()
+        return send(res, 200, { ok: true, login: snapshot })
+      }
+      if (action === '/dws/login/status') {
+        const snapshot = loginSnapshot()
+        let authenticated = false
+        if (snapshot.state === 'ok') {
+          try {
+            const raw = await runDws(['auth', 'status', '--format', 'json'])
+            authenticated = Boolean(raw.authenticated && raw.token_valid)
+          } catch (error) {
+            authenticated = false
+          }
+        }
+        return send(res, 200, { ok: true, login: snapshot, authenticated })
+      }
+      if (action === '/dws/login/cancel') {
+        const snapshot = await stopDwsLogin()
+        return send(res, 200, { ok: true, login: snapshot })
       }
       if (action === '/dws/status') {
         const raw = await runDws(['auth', 'status', '--format', 'json'])

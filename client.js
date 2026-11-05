@@ -4070,6 +4070,8 @@ window.__ModuleLoader__.load({
 
     function DingTalkConfig() {
       const [status, setStatus] = useState(null)
+      const [login, setLogin] = useState(null)
+      const [loginBusy, setLoginBusy] = useState(false)
       const [templates, setTemplates] = useState([])
       const [templateId, setTemplateId] = useState('')
       const [picking, setPicking] = useState(false)
@@ -4081,6 +4083,59 @@ window.__ModuleLoader__.load({
       const [error, setError] = useState('')
       const [busy, setBusy] = useState(false)
       const [saved, setSaved] = useState('')
+
+      const refreshStatus = useCallback(async () => {
+        try {
+          const payload = await call('/dws/status', {})
+          setStatus(payload.status)
+          return payload.status
+        } catch (cause) {
+          setStatus(null)
+          return null
+        }
+      }, [])
+
+      const startLogin = useCallback(async () => {
+        setLoginBusy(true)
+        setError('')
+        try {
+          const payload = await call('/dws/login/start', {})
+          setLogin(payload.login)
+          if (payload.login.state === 'failed') {
+            toast(payload.login.detail || '授权启动失败', 'error')
+          } else if (!payload.login.userCode) {
+            toast('没有拿到授权码，请重试', 'error')
+          }
+        } catch (cause) {
+          toast('发起授权失败：' + String(cause.message || cause), 'error')
+        } finally {
+          setLoginBusy(false)
+        }
+      }, [])
+
+      const loginActive = Boolean(login && login.state === 'pending')
+
+      useEffect(() => {
+        if (!loginActive) return undefined
+        const timer = window.setInterval(async () => {
+          try {
+            const payload = await call('/dws/login/status', {})
+            setLogin(payload.login)
+            if (payload.authenticated || (payload.login && payload.login.state === 'ok')) {
+              window.clearInterval(timer)
+              await refreshStatus()
+              setLogin(null)
+              toast('钉钉授权成功')
+            } else if (payload.login && payload.login.state === 'failed') {
+              window.clearInterval(timer)
+              toast(payload.login.detail || '授权失败', 'error')
+            }
+          } catch (cause) {
+            // 保持轮询
+          }
+        }, 2500)
+        return () => window.clearInterval(timer)
+      }, [loginActive, refreshStatus])
 
       const loadTemplate = useCallback(
         async (name) => {
@@ -4192,13 +4247,154 @@ window.__ModuleLoader__.load({
         h('div', { style: { fontSize: 13, fontWeight: 600 } }, '钉钉日志'),
         h(
           'div',
-          { style: { fontSize: 12, color: C.sub } },
-          status
-            ? status.authenticated && status.tokenValid
-              ? '已登录：' + status.userName + '（' + status.corpName + '）· 令牌有效期至 ' + String(status.expiresAt).replace('T', ' ').slice(0, 19)
-              : '未登录或令牌已失效，请在终端运行 dws auth login --recommend 后刷新'
-            : '正在检测登录态…',
+          {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              flexWrap: 'wrap',
+              padding: '9px 12px',
+              borderRadius: 10,
+              background: status && status.authenticated && status.tokenValid ? C.brandSoft : C.soft,
+              fontSize: 12,
+            },
+          },
+          h(
+            'span',
+            {
+              style: {
+                width: 7,
+                height: 7,
+                borderRadius: 999,
+                background: status && status.authenticated && status.tokenValid ? C.ok : C.sub,
+              },
+            },
+          ),
+          h(
+            'span',
+            { style: { flex: 1, minWidth: 200 } },
+            status
+              ? status.authenticated && status.tokenValid
+                ? '已登录：' +
+                  status.userName +
+                  '（' +
+                  status.corpName +
+                  '）· 令牌至 ' +
+                  String(status.expiresAt).replace('T', ' ').slice(0, 16)
+                : '未登录'
+              : '正在检测登录态…',
+          ),
+          h(
+            Btn,
+            {
+              small: true,
+              onClick: () => {
+                if (status && status.authenticated && status.tokenValid) startLogin()
+                else startLogin()
+              },
+              disabled: loginBusy,
+            },
+            loginBusy
+              ? '启动中…'
+              : status && status.authenticated && status.tokenValid
+                ? '重新授权'
+                : '绑定钉钉',
+          ),
         ),
+        login && login.state === 'pending'
+          ? h(
+              'div',
+              {
+                style: {
+                  border: '1px solid ' + C.line,
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  background: C.panel,
+                },
+              },
+              h('div', { style: { fontSize: 12, color: C.sub } }, '用钉钉扫码，或在浏览器打开下面的链接并输入授权码'),
+              h(
+                'div',
+                {
+                  style: {
+                    fontSize: 24,
+                    fontWeight: 700,
+                    letterSpacing: '.12em',
+                    fontFamily: 'ui-monospace, Consolas, monospace',
+                    color: C.brand,
+                  },
+                },
+                login.userCode || '……',
+              ),
+              login.url
+                ? h(
+                    'div',
+                    { style: { fontSize: 11, color: C.sub, wordBreak: 'break-all', lineHeight: 1.6 } },
+                    login.url,
+                  )
+                : null,
+              h(
+                'div',
+                { style: { display: 'flex', gap: 8 } },
+                login.url
+                  ? h(
+                      Btn,
+                      {
+                        small: true,
+                        primary: true,
+                        onClick: () => {
+                          if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(login.url).then(
+                              () => toast('授权链接已复制，粘贴到浏览器打开'),
+                              () => toast('复制失败，请手动选中链接', 'error'),
+                            )
+                          } else {
+                            toast('当前环境不支持剪贴板', 'error')
+                          }
+                        },
+                      },
+                      '复制授权链接',
+                    )
+                  : null,
+                h(
+                  Btn,
+                  {
+                    small: true,
+                    onClick: () => {
+                      call('/dws/login/cancel', {}).then(
+                        (payload) => setLogin(payload.login),
+                        () => setLogin(null),
+                      )
+                    },
+                  },
+                  '取消',
+                ),
+                h('span', { style: { fontSize: 11, color: C.sub, alignSelf: 'center' } }, login.detail || ''),
+              ),
+            )
+          : null,
+        login && login.state === 'failed'
+          ? h(
+              'div',
+              { style: { fontSize: 12, color: C.danger } },
+              (login.detail || '授权失败') + '　',
+              h(
+                'a',
+                {
+                  href: '#',
+                  onClick: (event) => {
+                    event.preventDefault()
+                    startLogin()
+                  },
+                  style: { color: C.brand },
+                },
+                '重试',
+              ),
+            )
+          : null,
         templateId && !picking
           ? h(
               'div',
