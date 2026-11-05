@@ -3936,6 +3936,7 @@ window.__ModuleLoader__.load({
       const [status, setStatus] = useState(null)
       const [templates, setTemplates] = useState([])
       const [templateId, setTemplateId] = useState('')
+      const [picking, setPicking] = useState(false)
       const [fields, setFields] = useState([])
       const [mapping, setMapping] = useState({ done: '', hours: '', left: '', risks: '' })
       const [recipients, setRecipients] = useState([])
@@ -3985,7 +3986,7 @@ window.__ModuleLoader__.load({
 
       useEffect(() => {
         let alive = true
-        Promise.all([call('/state'), call('/dws/status'), call('/dws/templates')])
+        Promise.all([call('/state'), call('/dws/status', {}), call('/dws/templates', {})])
           .then(([statePayload, statusPayload, templatePayload]) => {
             if (!alive) return
             const ding = (statePayload.state.settings && statePayload.state.settings.dingtalk) || {}
@@ -3994,7 +3995,7 @@ window.__ModuleLoader__.load({
             setTemplateId(ding.templateId || '')
             setFields(ding.fields || [])
             setMapping(ding.mapping || { done: '', hours: '', left: '', risks: '' })
-            setRecipients(ding.recipients || [])
+            setRecipients((current) => (current.length > 0 ? current : ding.recipients || []))
             if (ding.templateName && (!ding.fields || ding.fields.length === 0)) loadTemplate(ding.templateName)
           })
           .catch((cause) => alive && setError(String(cause.message || cause)))
@@ -4052,20 +4053,47 @@ window.__ModuleLoader__.load({
               : '未登录或令牌已失效，请在终端运行 dws auth login --recommend 后刷新'
             : '正在检测登录态…',
         ),
-        h(Field, { label: '日志模板' }, h(
-          'select',
-          {
-            value: templateId,
-            onChange: (event) => {
-              const next = templates.find((item) => item.id === event.target.value)
-              setTemplateId(event.target.value)
-              if (next) loadTemplate(next.name)
-            },
-            style: inputStyle(),
-          },
-          h('option', { value: '' }, '选择模板…'),
-          templates.map((item) => h('option', { key: item.id, value: item.id }, item.name)),
-        )),
+        templateId && !picking
+          ? h(
+              'div',
+              { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, flexWrap: 'wrap' } },
+              h('span', { style: { color: C.sub } }, '日志模板'),
+              h(
+                'span',
+                { style: { fontWeight: 600 } },
+                ((templates.find((item) => item.id === templateId) || {}).name || '已选模板'),
+              ),
+              h(
+                'span',
+                { style: { color: C.sub, fontSize: 11 } },
+                fields.length ? fields.length + ' 个字段' : '字段未读取',
+              ),
+              h('div', { style: { flex: 1 } }),
+              h(
+                Btn,
+                {
+                  small: true,
+                  onClick: () => {
+                    const hit = templates.find((item) => item.id === templateId)
+                    if (hit) loadTemplate(hit.name)
+                  },
+                },
+                '重新读取字段',
+              ),
+              h(Btn, { small: true, onClick: () => setPicking(true) }, '更换'),
+            )
+          : h(Field, { label: '日志模板（选一次即可）' }, h(Select, {
+              value: templateId,
+              onChange: (next) => {
+                const hit = templates.find((item) => item.id === next)
+                setTemplateId(next)
+                setPicking(false)
+                if (hit) loadTemplate(hit.name)
+              },
+              options: [{ value: '', label: '选择模板…' }].concat(
+                templates.map((item) => ({ value: item.id, label: item.name })),
+              ),
+            })),
         fields.length > 0
           ? h(
               'div',
@@ -4124,9 +4152,9 @@ window.__ModuleLoader__.load({
                       key: person.userId,
                       small: true,
                       onClick: () => {
-                        if (!recipients.some((item) => item.userId === person.userId)) {
-                          setRecipients(recipients.concat(person))
-                        }
+                        setRecipients((current) =>
+                          current.some((item) => item.userId === person.userId) ? current : current.concat(person),
+                        )
                         setCandidates([])
                         setQuery('')
                       },
@@ -4160,7 +4188,8 @@ window.__ModuleLoader__.load({
                     h(
                       'button',
                       {
-                        onClick: () => setRecipients(recipients.filter((item) => item.userId !== person.userId)),
+                        onClick: () =>
+                          setRecipients((current) => current.filter((item) => item.userId !== person.userId)),
                         style: { border: 'none', background: 'transparent', cursor: 'pointer', color: C.sub },
                       },
                       '×',
