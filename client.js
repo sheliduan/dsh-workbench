@@ -2071,11 +2071,13 @@ window.__ModuleLoader__.load({
           )
         }),
         buckets.map((bucket, index) =>
-          h(
-            'text',
-            { key: 'l' + bucket.key, x: padX + stepX * index, y: height - 6, textAnchor: 'middle', fontSize: 9, fill: C.sub },
-            bucket.label,
-          ),
+          Math.round((index + 1) % Math.max(1, Math.ceil(buckets.length / 7))) === 0 || index === buckets.length - 1
+            ? h(
+                'text',
+                { key: 'l' + bucket.key, x: padX + stepX * index, y: height - 6, textAnchor: 'middle', fontSize: 9, fill: C.sub },
+                bucket.label,
+              )
+            : null,
         ),
       )
     }
@@ -2119,26 +2121,26 @@ window.__ModuleLoader__.load({
       if (rows.length === 0) return h('div', { style: { fontSize: 12, color: C.sub } }, '暂无数据')
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'center', flex: 1 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center', flex: 1 } },
         rows.map((row) =>
           h(
             'div',
             {
               key: row.key,
               onClick: onPick ? () => onPick(row) : undefined,
-              style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: onPick ? 'pointer' : 'default' },
+              style: { display: 'flex', flexDirection: 'column', gap: 5, cursor: onPick ? 'pointer' : 'default' },
             },
             h(
-              'span',
-              { style: { width: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: C.text } },
-              row.key,
+              'div',
+              { style: { display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 12.5 } },
+              h('span', { style: { flex: 1, lineHeight: 1.4, wordBreak: 'break-word' } }, row.key),
+              h('span', { style: { color: C.sub, fontWeight: 600, flex: '0 0 auto' } }, row.value),
             ),
             h(
               'div',
-              { style: { flex: 1, height: 9, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+              { style: { height: 8, borderRadius: 999, background: C.track, overflow: 'hidden' } },
               h('div', { style: { width: Math.round((row.value / max) * 100) + '%', height: '100%', background: C.grad } }),
             ),
-            h('span', { style: { width: 28, textAlign: 'right', color: C.sub, fontWeight: 600 } }, row.value),
           ),
         ),
       )
@@ -2204,23 +2206,18 @@ window.__ModuleLoader__.load({
             })
           }
         } else if (scope === 'month') {
-          const weeks = new Map()
-          for (const item of days) {
-            const key = isoWeekKey(item.date)
-            if (!weeks.has(key)) weeks.set(key, [])
-            weeks.get(key).push(item)
-          }
-          for (const entry of Array.from(weeks.entries()).sort()) {
-            const key = entry[0]
-            const list2 = entry[1]
+          let cursor = range.start
+          while (cursor <= range.end) {
+            const dayItems = days.filter((item) => item.date === cursor)
             list.push({
-              key,
-              label: key.slice(-2) + '周',
-              done: list2.filter((item) => item.status === 'done').length,
-              hours: round1(list2.reduce((sum, item) => sum + (item.spentH || 0), 0)),
-              estimate: round1(list2.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
-              items: list2,
+              key: cursor,
+              label: String(Number(cursor.slice(8))),
+              done: dayItems.filter((item) => item.status === 'done').length,
+              hours: round1(dayItems.reduce((sum, item) => sum + (item.spentH || 0), 0)),
+              estimate: round1(dayItems.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
+              items: dayItems,
             })
+            cursor = addDays(cursor, 1)
           }
         } else {
           for (let month = 1; month <= 12; month += 1) {
@@ -2272,7 +2269,6 @@ window.__ModuleLoader__.load({
             options: [
               { value: 'week', label: '本周' },
               { value: 'month', label: '本月' },
-              { value: 'quarter', label: '本季' },
             ],
             onChange: setScope,
           }),
@@ -2358,18 +2354,6 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, alignItems: 'stretch' } },
-          h(
-            'div',
-            { style: { display: 'flex' } },
-            h(
-              ChartCard,
-              { title: '预估 vs 实际工时', hint: '点击实际柱查看任务' },
-              h(GroupedBars, {
-                buckets,
-                onPick: (bucket) => setDrill({ title: bucket.label + ' 的任务', items: bucket.items }),
-              }),
-            ),
-          ),
           h(
             'div',
             { style: { display: 'flex' } },
