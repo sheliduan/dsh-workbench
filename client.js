@@ -2212,7 +2212,19 @@ window.__ModuleLoader__.load({
       if (rows.length === 0) return h('div', { style: { fontSize: 12, color: C.sub } }, '暂无数据')
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center', flex: 1 } },
+        {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            flex: 1,
+            minHeight: 0,
+            maxHeight: 196,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            paddingRight: 6,
+          },
+        },
         rows.map((row) =>
           h(
             'div',
@@ -2339,7 +2351,7 @@ window.__ModuleLoader__.load({
         return Array.from(counter.entries())
           .map((entry) => ({ key: entry[0], value: entry[1] }))
           .sort((left, right) => right.value - left.value)
-          .slice(0, 7)
+          .slice(0, 24)
       }, [done, state.items])
 
       const tile = (label, value, hint, accent) =>
