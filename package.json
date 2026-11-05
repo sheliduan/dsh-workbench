@@ -2,7 +2,24 @@
   "name": "@local/dsh-workbench",
   "version": "0.1.0",
   "private": true,
-  "description": "个人工作台：日/周/月计划、日报周报月报与留痕",
+  "description": "个人工作台：日/周/月计划、统计、报告与 GitLab / 钉钉同步",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "dsh-bundle",
+    "worklog",
+    "gitlab",
+    "dingtalk"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OWNER/dsh-workbench.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OWNER/dsh-workbench/issues"
+  },
+  "homepage": "https://github.com/OWNER/dsh-workbench#readme",
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -15,7 +32,10 @@
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",
-    "icon.svg"
+    "icon.svg",
+    "README.md",
+    "INSTALL.md",
+    "LICENSE"
   ],
   "dsh": {
     "bundle": {
