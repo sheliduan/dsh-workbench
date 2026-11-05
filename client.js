@@ -2391,10 +2391,10 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'stretch', width: '100%' } },
+          { style: { display: 'table', width: '100%', tableLayout: 'fixed', borderSpacing: '10px' } },
           h(
             'div',
-            { style: { display: 'flex', flex: '0 0 calc(50% - 5px)', maxWidth: 'calc(50% - 5px)', minWidth: 0 } },
+            { style: { display: 'table-cell', width: '50%', verticalAlign: 'top', minWidth: 0 } },
             h(
               ChartCard,
               { title: '任务构成', hint: '点击扇区查看清单' },
@@ -2437,7 +2437,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { display: 'flex', flex: '0 0 calc(50% - 5px)', maxWidth: 'calc(50% - 5px)', minWidth: 0 } },
+            { style: { display: 'table-cell', width: '50%', verticalAlign: 'top', minWidth: 0 } },
             h(
               ChartCard,
               {
@@ -2458,10 +2458,10 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'stretch', width: '100%' } },
+          { style: { display: 'table', width: '100%', tableLayout: 'fixed', borderSpacing: '10px' } },
           h(
             'div',
-            { style: { display: 'flex', flex: '0 0 calc(50% - 5px)', maxWidth: 'calc(50% - 5px)', minWidth: 0 } },
+            { style: { display: 'table-cell', width: '50%', verticalAlign: 'top', minWidth: 0 } },
             h(
               ChartCard,
               {
@@ -2481,7 +2481,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { display: 'flex', flex: '0 0 calc(50% - 5px)', maxWidth: 'calc(50% - 5px)', minWidth: 0 } },
+            { style: { display: 'table-cell', width: '50%', verticalAlign: 'top', minWidth: 0 } },
             h(
               ChartCard,
               { title: '计划条目分布', hint: '点击查看清单' },
