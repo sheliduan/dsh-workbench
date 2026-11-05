@@ -3785,8 +3785,11 @@ window.__ModuleLoader__.load({
               ? current
               : payload.result.projects.map((project) => project.id),
           )
+          toast('连接成功：' + payload.result.user.username + '，可见 ' + payload.result.projects.length + ' 个项目')
         } catch (cause) {
-          setError(String(cause.message || cause))
+          const message = String(cause.message || cause)
+          setError(message)
+          toast('连接失败：' + message, 'error')
         } finally {
           setTesting(false)
         }
@@ -3804,8 +3807,11 @@ window.__ModuleLoader__.load({
           })
           setSaved('已保存')
           setToken('')
+          toast('GitLab 配置已保存')
         } catch (cause) {
-          setError(String(cause.message || cause))
+          const message = String(cause.message || cause)
+          setError(message)
+          toast('保存失败：' + message, 'error')
         }
       }, [baseUrl, token, selected, result])
 
@@ -4011,8 +4017,15 @@ window.__ModuleLoader__.load({
         try {
           const payload = await call('/dws/people', { query: query.trim() })
           setCandidates(payload.people)
+          if (payload.people.length === 0) {
+            toast('没找到「' + query.trim() + '」，换个姓名或用工号试试', 'error')
+          } else {
+            toast('找到 ' + payload.people.length + ' 位候选人，点名字加入接收人')
+          }
         } catch (cause) {
-          setError(String(cause.message || cause))
+          const message = String(cause.message || cause)
+          setError(message)
+          toast('搜索失败：' + message, 'error')
         } finally {
           setBusy(false)
         }
@@ -4031,8 +4044,11 @@ window.__ModuleLoader__.load({
             recipients,
           })
           setSaved('已保存')
+          toast('钉钉配置已保存（模板 + 字段映射 + ' + recipients.length + ' 位接收人）')
         } catch (cause) {
-          setError(String(cause.message || cause))
+          const message = String(cause.message || cause)
+          setError(message)
+          toast('保存失败：' + message, 'error')
         } finally {
           setBusy(false)
         }
@@ -4214,6 +4230,7 @@ window.__ModuleLoader__.load({
         { style: { display: 'flex', flexDirection: 'column', gap: 30, padding: '4px 2px' } },
         h(GitLabConfig),
         h(DingTalkConfig),
+        h(Toasts),
       )
     }
 
@@ -4455,6 +4472,40 @@ window.__ModuleLoader__.load({
           ),
         ),
       )
+    }
+
+    const toastBus = {
+      listeners: new Set(),
+      emit(message, type) {
+        const item = {
+          id: Math.random().toString(36).slice(2) + Date.now().toString(36),
+          message: String(message),
+          type: type || 'ok',
+        }
+        for (const listener of this.listeners) listener(item)
+      },
+      subscribe(listener) {
+        this.listeners.add(listener)
+        return () => this.listeners.delete(listener)
+      },
+    }
+
+    function toast(message, type) {
+      toastBus.emit(message, type)
+    }
+
+    function Toasts() {
+      const [list, setList] = useState([])
+      useEffect(() => {
+        const unsubscribe = toastBus.subscribe((item) => {
+          setList((current) => current.concat(item))
+          window.setTimeout(() => {
+            setList((current) => current.filter((entry) => entry.id !== item.id))
+          }, 3400)
+        })
+        return unsubscribe
+      }, [])
+      return h(ToastHost, { toasts: list })
     }
 
     function Workbench() {
