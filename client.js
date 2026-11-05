@@ -4424,6 +4424,20 @@ window.__ModuleLoader__.load({
             ),
           ),
         },
+        h(
+          'div',
+          {
+            style: {
+              padding: '9px 11px',
+              borderRadius: 10,
+              background: C.brandSoft,
+              fontSize: 11.5,
+              lineHeight: 1.6,
+              color: C.sub,
+            },
+          },
+          'GitLab 与钉钉的对接在「插件 → 工作台 → 配置」页面里，不在这里。这里只管导出目录、定时和节假日。',
+        ),
         h(Field, { label: '导出根目录（留空则用 profile 下的 worklog/exports）' }, h('input', {
           value: root,
           onChange: (event) => setRoot(event.target.value),
