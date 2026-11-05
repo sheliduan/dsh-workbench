@@ -5,7 +5,7 @@
  * 数据经 Host 半的 /workbench/api 读写；报告由 Host 渲染成段落 + Markdown。
  */
 window.__ModuleLoader__.load({
-  id: '@local/dsh-workbench',
+  id: 'dsh-workbench',
   factory(require) {
     const React = require('react')
     const h = React.createElement
@@ -4838,7 +4838,7 @@ window.__ModuleLoader__.load({
         ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: 'workbench' }, Workbench))
         ctx.slots.inject('plugins.row.config', () =>
           ctx.slots.register(
-            { name: 'plugins.row.config', key: '@local/dsh-workbench#workbench' },
+            { name: 'plugins.row.config', key: 'dsh-workbench#workbench' },
             BundleConfig,
           ),
         )
