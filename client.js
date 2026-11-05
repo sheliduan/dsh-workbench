@@ -901,11 +901,11 @@ window.__ModuleLoader__.load({
           try {
             result = await onSync(body)
           } catch (cause) {
-            if (cause && cause.code === 'ISSUE_MISSING' && window.confirm(cause.message)) {
-              result = await onSync({ ...body, allowRecreate: true })
-            } else {
-              throw cause
+            if (cause && cause.code === 'ISSUE_MISSING') {
+              setMissing({ message: cause.message, body })
+              return
             }
+            throw cause
           }
           const link = result && result.item && result.item.link
           if (notify) {
@@ -962,6 +962,27 @@ window.__ModuleLoader__.load({
         [commit],
       )
 
+      const [missing, setMissing] = useState(null)
+      const confirmRecreate = useCallback(async () => {
+        if (!missing) return
+        const body = missing.body
+        setMissing(null)
+        setSyncing(true)
+        setError('')
+        try {
+          const result = await onSync(Object.assign({}, body, { allowRecreate: true }))
+          const link = result && result.item && result.item.link
+          if (notify) {
+            notify('原任务已被删除，已重新创建 #' + (link ? link.issueIid : ''))
+          }
+          onClose()
+        } catch (cause) {
+          setError(String(cause.message || cause))
+        } finally {
+          setSyncing(false)
+        }
+      }, [missing, onSync, notify, onClose])
+
       return h(
         Modal,
         {
@@ -969,7 +990,7 @@ window.__ModuleLoader__.load({
           onClose,
           footer: h(
             'div',
-            { style: { display: 'flex', gap: 8, justifyContent: 'flex-end' } },
+            { style: { display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' } },
             error ? h('div', { style: { flex: 1, color: C.danger, fontSize: 12 } }, error) : null,
             h(Btn, { onClick: onClose }, '取消'),
             isDay && gitlabProjects.length > 0
@@ -981,6 +1002,26 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { onKeyDown, style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+          missing
+            ? h(
+                'div',
+                {
+                  style: {
+                    border: '1px solid color-mix(in srgb, ' + C.danger + ' 32%, transparent)',
+                    background: 'color-mix(in srgb, ' + C.danger + ' 8%, transparent)',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 12.5,
+                  },
+                },
+                h('span', { style: { flex: 1, lineHeight: 1.6 } }, missing.message),
+                h(Btn, { small: true, onClick: () => setMissing(null) }, '取消'),
+                h(Btn, { small: true, primary: true, onClick: confirmRecreate, disabled: syncing }, '重新创建'),
+              )
+            : null,
           h(Field, { label: '标题' }, h(TextInput, {
             autoFocus: true,
             value: draft.title,
@@ -1408,6 +1449,71 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function ConfirmDialog({ title, message, detail, confirmText, cancelText, onConfirm, onCancel, tone }) {
+      const danger = tone !== 'normal'
+      return h(
+        Modal,
+        {
+          title,
+          width: 440,
+          onClose: onCancel,
+          footer: h(
+            'div',
+            { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
+            h(Btn, { onClick: onCancel }, cancelText || '取消'),
+            h(
+              'button',
+              {
+                onClick: onConfirm,
+                style: {
+                  border: 'none',
+                  background: danger ? C.danger : C.grad,
+                  color: '#fff',
+                  borderRadius: 8,
+                  padding: '7px 16px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  boxShadow: danger ? 'none' : '0 2px 10px ' + C.brandLine,
+                },
+              },
+              confirmText || '确定',
+            ),
+          ),
+        },
+        h(
+          'div',
+          { style: { display: 'flex', gap: 10, alignItems: 'flex-start' } },
+          h(
+            'div',
+            {
+              style: {
+                flex: '0 0 auto',
+                width: 28,
+                height: 28,
+                borderRadius: 999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: danger ? 'color-mix(in srgb, ' + C.danger + ' 14%, transparent)' : C.brandSoft,
+                color: danger ? C.danger : C.brand,
+                fontSize: 14,
+                fontWeight: 700,
+              },
+            },
+            danger ? '!' : '?',
+          ),
+          h(
+            'div',
+            { style: { flex: 1, display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 2 } },
+            h('div', { style: { fontSize: 13.5, lineHeight: 1.6 } }, message),
+            detail ? h('div', { style: { fontSize: 11.5, color: C.sub, lineHeight: 1.6 } }, detail) : null,
+          ),
+        ),
+      )
+    }
+
     function TodayView({ state, mutate, openForm, notify }) {
       const today = state.today
       const items = useMemo(
@@ -1434,6 +1540,8 @@ window.__ModuleLoader__.load({
         }
       }, [items])
 
+      const [pending, setPending] = useState(null)
+
       const toggle = useCallback(
         (item) =>
           mutate('/item/save', { id: item.id, status: item.status === 'done' ? 'todo' : 'done' }).catch((cause) =>
@@ -1441,13 +1549,7 @@ window.__ModuleLoader__.load({
           ),
         [mutate, notify],
       )
-      const remove = useCallback(
-        (item) => {
-          if (!window.confirm('删除「' + item.title + '」？')) return
-          mutate('/item/delete', { id: item.id }).catch((cause) => notify(String(cause.message || cause), 'error'))
-        },
-        [mutate, notify],
-      )
+      const remove = useCallback((item) => setPending({ kind: 'delete', item }), [])
 
       const complete = useCallback(
         async (item) => {
@@ -1537,13 +1639,7 @@ window.__ModuleLoader__.load({
                     notify('今天没有未完成的任务')
                     return
                   }
-                  if (!window.confirm('把今天 ' + open.length + ' 条未完成任务顺延到明天？\n（会修改这些任务的日期，可再次手动改回）')) {
-                    return
-                  }
-                  mutate('/item/rollover', { date: today }).then(
-                    (payload) => notify(payload.moved ? `已顺延 ${payload.moved} 条到 ${payload.target}` : '没有需要顺延的任务'),
-                    (cause) => notify(String(cause.message || cause), 'error'),
-                  )
+                  setPending({ kind: 'rollover', count: open.length })
                 },
               },
               '顺延未完成',
@@ -1606,6 +1702,40 @@ window.__ModuleLoader__.load({
           h(MiniStat, { label: '实际工时', value: stats.spent + 'h', accent: C.ok }),
           h(WeekProgress, { state }),
         ),
+        pending && pending.kind === 'delete'
+          ? h(ConfirmDialog, {
+              title: '删除任务',
+              message: '确定删除「' + pending.item.title + '」？',
+              detail: '只删本地这条记录；已经同步到 GitLab 的任务不会被删除。',
+              confirmText: '删除',
+              onCancel: () => setPending(null),
+              onConfirm: () => {
+                const target = pending.item
+                setPending(null)
+                mutate('/item/delete', { id: target.id }).catch((cause) =>
+                  notify(String(cause.message || cause), 'error'),
+                )
+              },
+            })
+          : null,
+        pending && pending.kind === 'rollover'
+          ? h(ConfirmDialog, {
+              title: '顺延未完成任务',
+              message: '把今天 ' + pending.count + ' 条未完成任务顺延到明天？',
+              detail: '会把这些任务的日期改到下一个工作日，之后仍可手动改回。',
+              confirmText: '顺延',
+              tone: 'normal',
+              onCancel: () => setPending(null),
+              onConfirm: () => {
+                setPending(null)
+                mutate('/item/rollover', { date: today }).then(
+                  (payload) =>
+                    notify(payload.moved ? '已顺延 ' + payload.moved + ' 条到 ' + payload.target : '没有需要顺延的任务'),
+                  (cause) => notify(String(cause.message || cause), 'error'),
+                )
+              },
+            })
+          : null,
       )
     }
 
