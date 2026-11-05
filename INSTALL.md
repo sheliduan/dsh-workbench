@@ -14,7 +14,7 @@
 ## 方式 A：本地目录（最简单）
 
 ```powershell
-git clone https://github.com/<你>/dsh-workbench.git D:\dsh-workbench
+git clone https://github.com/sheliduan/dsh-workbench.git D:\dsh-workbench
 ```
 
 1. 打开 DSH → 侧边栏「插件」→ **Add plugin** → 选第三方插件（本地路径）
@@ -28,7 +28,7 @@ git clone https://github.com/<你>/dsh-workbench.git D:\dsh-workbench
 在「插件」页安装时填：
 
 ```
-git+https://github.com/<你>/dsh-workbench.git#<40位commit>&path:/
+git+https://github.com/sheliduan/dsh-workbench.git#<40位commit>&path:/
 ```
 
 - `#` 后面必须是完整 40 位 commit，不能是分支名（分支会漂移）

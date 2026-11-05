@@ -57,7 +57,7 @@
 ### 方式 A：本地目录
 
 ```powershell
-git clone https://github.com/<你>/dsh-workbench.git D:\dsh-workbench
+git clone https://github.com/sheliduan/dsh-workbench.git D:\dsh-workbench
 ```
 
 打开 DSH → 侧边栏「插件」→ **Add plugin** → 填绝对路径 `D:\dsh-workbench` → 安装。
@@ -65,7 +65,7 @@ git clone https://github.com/<你>/dsh-workbench.git D:\dsh-workbench
 ### 方式 B：Git 固定 commit
 
 ```
-git+https://github.com/<你>/dsh-workbench.git#<40位commit>&path:/
+git+https://github.com/sheliduan/dsh-workbench.git#<40位commit>&path:/
 ```
 
 安装后在侧边栏底部出现「工作台」图标。
