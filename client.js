@@ -2252,7 +2252,7 @@ window.__ModuleLoader__.load({
     function ChartCard({ title, hint, children, actions }) {
       return h(
         'div',
-        cardStyle({ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0, width: '100%', minHeight: 248 }),
+        cardStyle({ flex: '1 1 auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0, width: '100%', minHeight: 248 }),
         h(
           'div',
           { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
@@ -2394,7 +2394,7 @@ window.__ModuleLoader__.load({
           { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1fr', gap: 10, alignItems: 'stretch' } },
           h(
             'div',
-            { style: { display: 'flex' } },
+            { style: { display: 'flex', width: '100%', minWidth: 0 } },
             h(
               ChartCard,
               { title: '任务构成', hint: '点击扇区查看清单' },
@@ -2437,7 +2437,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { display: 'flex' } },
+            { style: { display: 'flex', width: '100%', minWidth: 0 } },
             h(
               ChartCard,
               {
@@ -2461,7 +2461,7 @@ window.__ModuleLoader__.load({
           { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1fr', gap: 10, alignItems: 'stretch' } },
           h(
             'div',
-            { style: { display: 'flex' } },
+            { style: { display: 'flex', width: '100%', minWidth: 0 } },
             h(
               ChartCard,
               {
@@ -2481,7 +2481,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { display: 'flex' } },
+            { style: { display: 'flex', width: '100%', minWidth: 0 } },
             h(
               ChartCard,
               { title: '计划条目分布', hint: '点击查看清单' },
