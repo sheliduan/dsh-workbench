@@ -1948,6 +1948,485 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function periodRange(scope, today) {
+      if (scope === 'week') {
+        const start = mondayOf(today)
+        return { start, end: addDays(start, 6), label: weekLabel(isoWeekKey(today)) }
+      }
+      if (scope === 'month') {
+        const monthKey = today.slice(0, 7)
+        const parts = monthKey.split('-').map(Number)
+        const last = new Date(parts[0], parts[1], 0)
+        return { start: monthKey + '-01', end: monthKey + '-' + pad2(last.getDate()), label: monthKey }
+      }
+      const parts = today.split('-').map(Number)
+      const quarter = Math.floor((parts[1] - 1) / 3) + 1
+      const startMonth = (quarter - 1) * 3 + 1
+      const endMonth = startMonth + 2
+      const lastDay = new Date(parts[0], endMonth, 0)
+      return {
+        start: parts[0] + '-' + pad2(startMonth) + '-01',
+        end: parts[0] + '-' + pad2(endMonth) + '-' + pad2(lastDay.getDate()),
+        label: parts[0] + ' Q' + quarter,
+      }
+    }
+
+    function holidaysOf(state) {
+      const map = new Map()
+      for (const entry of (state.settings && state.settings.holidays) || []) {
+        if (entry && entry.date) map.set(String(entry.date), entry.kind === 'on' ? 'on' : 'off')
+      }
+      return map
+    }
+
+    function isOvertime(dateStr, map) {
+      if (!dateStr) return false
+      const marked = map.get(dateStr)
+      if (marked === 'on') return false
+      if (marked === 'off') return true
+      return isWeekend(dateStr)
+    }
+
+    function Donut({ segments, size, centerLabel, centerValue, onPick }) {
+      const side = size || 156
+      const radius = side / 2 - 14
+      const circumference = 2 * Math.PI * radius
+      const total = segments.reduce((sum, entry) => sum + entry.value, 0)
+      let offset = 0
+      return h(
+        'svg',
+        { width: side, height: side, viewBox: '0 0 ' + side + ' ' + side },
+        h('circle', { cx: side / 2, cy: side / 2, r: radius, fill: 'none', stroke: C.track, strokeWidth: 15 }),
+        segments.map((entry) => {
+          const length = total ? (entry.value / total) * circumference : 0
+          const node = h(
+            'circle',
+            {
+              key: entry.label,
+              cx: side / 2,
+              cy: side / 2,
+              r: radius,
+              fill: 'none',
+              stroke: entry.color,
+              strokeWidth: 15,
+              strokeDasharray: length + ' ' + (circumference - length),
+              strokeDashoffset: -offset,
+              transform: 'rotate(-90 ' + side / 2 + ' ' + side / 2 + ')',
+              style: { cursor: onPick ? 'pointer' : 'default', transition: 'stroke-dasharray .4s ease' },
+              onClick: onPick ? () => onPick(entry) : undefined,
+            },
+            h('title', null, entry.label + '：' + entry.value),
+          )
+          offset += length
+          return node
+        }),
+        h(
+          'text',
+          { x: '50%', y: '47%', textAnchor: 'middle', dominantBaseline: 'central', fontSize: 22, fontWeight: 700, fill: C.text },
+          centerValue,
+        ),
+        h(
+          'text',
+          { x: '50%', y: '63%', textAnchor: 'middle', dominantBaseline: 'central', fontSize: 10, fill: C.sub },
+          centerLabel,
+        ),
+      )
+    }
+
+    function LineTrend({ buckets }) {
+      const width = 560
+      const height = 150
+      const padX = 20
+      const padY = 16
+      const innerW = width - padX * 2
+      const innerH = height - padY - 22
+      const maxDone = Math.max(1, ...buckets.map((bucket) => bucket.done))
+      const maxHours = Math.max(1, ...buckets.map((bucket) => bucket.hours))
+      const stepX = buckets.length > 1 ? innerW / (buckets.length - 1) : 0
+      const point = (index, value, max) => [padX + stepX * index, padY + innerH - (value / max) * innerH]
+      const lineOf = (key, max) => buckets.map((bucket, index) => point(index, bucket[key], max).join(',')).join(' ')
+
+      return h(
+        'svg',
+        { width: '100%', height, viewBox: '0 0 ' + width + ' ' + height, preserveAspectRatio: 'none' },
+        [0, 0.5, 1].map((ratio) =>
+          h('line', {
+            key: ratio,
+            x1: padX,
+            x2: width - padX,
+            y1: padY + innerH * ratio,
+            y2: padY + innerH * ratio,
+            stroke: C.line,
+            strokeDasharray: ratio === 0 ? 'none' : '3 4',
+          }),
+        ),
+        h('polyline', { points: lineOf('hours', maxHours), fill: 'none', stroke: C.warn, strokeWidth: 2, opacity: 0.85 }),
+        h('polyline', { points: lineOf('done', maxDone), fill: 'none', stroke: C.brand, strokeWidth: 2.5 }),
+        buckets.map((bucket, index) => {
+          const coords = point(index, bucket.done, maxDone)
+          return h(
+            'circle',
+            { key: bucket.key, cx: coords[0], cy: coords[1], r: 3.5, fill: C.brand },
+            h('title', null, bucket.label + '：完成 ' + bucket.done + ' 条 · 工时 ' + bucket.hours + 'h'),
+          )
+        }),
+        buckets.map((bucket, index) =>
+          h(
+            'text',
+            { key: 'l' + bucket.key, x: padX + stepX * index, y: height - 6, textAnchor: 'middle', fontSize: 9, fill: C.sub },
+            bucket.label,
+          ),
+        ),
+      )
+    }
+
+    function GroupedBars({ buckets, onPick }) {
+      const maxValue = Math.max(1, ...buckets.map((bucket) => Math.max(bucket.estimate, bucket.hours)))
+      return h(
+        'div',
+        { style: { display: 'flex', alignItems: 'flex-end', gap: 8, height: 150, padding: '0 4px', overflowX: 'auto' } },
+        buckets.map((bucket) =>
+          h(
+            'div',
+            { key: bucket.key, style: { flex: '1 1 0', minWidth: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
+            h(
+              'div',
+              { style: { display: 'flex', alignItems: 'flex-end', gap: 3, height: 108 } },
+              h('div', {
+                title: bucket.label + ' 预估 ' + bucket.estimate + 'h',
+                style: { width: 10, height: Math.max(2, Math.round((bucket.estimate / maxValue) * 108)), borderRadius: 3, background: C.track },
+              }),
+              h('div', {
+                title: bucket.label + ' 实际 ' + bucket.hours + 'h',
+                onClick: onPick ? () => onPick(bucket) : undefined,
+                style: {
+                  width: 10,
+                  height: Math.max(2, Math.round((bucket.hours / maxValue) * 108)),
+                  borderRadius: 3,
+                  background: C.grad,
+                  cursor: onPick ? 'pointer' : 'default',
+                },
+              }),
+            ),
+            h('div', { style: { fontSize: 9.5, color: C.sub } }, bucket.label),
+          ),
+        ),
+      )
+    }
+
+    function HBars({ rows, onPick }) {
+      const max = Math.max(1, ...rows.map((row) => row.value))
+      if (rows.length === 0) return h('div', { style: { fontSize: 12, color: C.sub } }, '暂无数据')
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+        rows.map((row) =>
+          h(
+            'div',
+            {
+              key: row.key,
+              onClick: onPick ? () => onPick(row) : undefined,
+              style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, cursor: onPick ? 'pointer' : 'default' },
+            },
+            h(
+              'span',
+              { style: { width: 104, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+              row.key,
+            ),
+            h(
+              'div',
+              { style: { flex: 1, height: 7, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+              h('div', { style: { width: Math.round((row.value / max) * 100) + '%', height: '100%', background: C.grad } }),
+            ),
+            h('span', { style: { width: 30, textAlign: 'right', color: C.sub } }, row.value),
+          ),
+        ),
+      )
+    }
+
+    function ChartCard({ title, hint, children, actions }) {
+      return h(
+        'div',
+        cardStyle({ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, width: '100%' }),
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+          h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, title),
+          actions || null,
+          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, hint) : null,
+        ),
+        children,
+      )
+    }
+
+    function StatsPage({ state }) {
+      const [scope, setScope] = useState('week')
+      const [drill, setDrill] = useState(null)
+      const range = periodRange(scope, state.today)
+      const holidayMap = useMemo(() => holidaysOf(state), [state.settings])
+
+      const days = useMemo(
+        () =>
+          state.items.filter(
+            (item) => item.level === 'day' && item.date && item.date >= range.start && item.date <= range.end,
+          ),
+        [state.items, range.start, range.end],
+      )
+
+      const done = days.filter((item) => item.status === 'done')
+      const open = days.filter((item) => item.status !== 'done' && item.status !== 'dropped')
+      const donePlanned = done.filter((item) => item.parentId)
+      const doneOffPlan = done.filter((item) => !item.parentId)
+      const planned = days.filter((item) => item.parentId)
+      const spent = round1(days.reduce((sum, item) => sum + (item.spentH || 0), 0))
+      const estimate = round1(days.reduce((sum, item) => sum + (item.estimateH || 0), 0))
+      const overtime = days.filter((item) => isOvertime(item.date, holidayMap))
+      const overtimeHours = round1(overtime.reduce((sum, item) => sum + (item.spentH || 0), 0))
+
+      const completion = days.length ? Math.round((done.length / days.length) * 100) : 0
+      const planRate = planned.length ? Math.round((donePlanned.length / planned.length) * 100) : null
+      const offRate = done.length ? Math.round((doneOffPlan.length / done.length) * 100) : null
+
+      const buckets = useMemo(() => {
+        const list = []
+        if (scope === 'week') {
+          for (let index = 0; index < 7; index += 1) {
+            const dateKey = addDays(range.start, index)
+            const dayItems = days.filter((item) => item.date === dateKey)
+            list.push({
+              key: dateKey,
+              label: dateKey.slice(8),
+              done: dayItems.filter((item) => item.status === 'done').length,
+              hours: round1(dayItems.reduce((sum, item) => sum + (item.spentH || 0), 0)),
+              estimate: round1(dayItems.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
+              items: dayItems,
+            })
+          }
+        } else if (scope === 'month') {
+          const weeks = new Map()
+          for (const item of days) {
+            const key = isoWeekKey(item.date)
+            if (!weeks.has(key)) weeks.set(key, [])
+            weeks.get(key).push(item)
+          }
+          for (const entry of Array.from(weeks.entries()).sort()) {
+            const key = entry[0]
+            const list2 = entry[1]
+            list.push({
+              key,
+              label: key.slice(-2) + '周',
+              done: list2.filter((item) => item.status === 'done').length,
+              hours: round1(list2.reduce((sum, item) => sum + (item.spentH || 0), 0)),
+              estimate: round1(list2.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
+              items: list2,
+            })
+          }
+        } else {
+          for (let month = 1; month <= 12; month += 1) {
+            const prefix = range.start.slice(0, 4) + '-' + pad2(month)
+            if (prefix < range.start.slice(0, 7) || prefix > range.end.slice(0, 7)) continue
+            const list2 = days.filter((item) => item.date.slice(0, 7) === prefix)
+            list.push({
+              key: prefix,
+              label: month + '月',
+              done: list2.filter((item) => item.status === 'done').length,
+              hours: round1(list2.reduce((sum, item) => sum + (item.spentH || 0), 0)),
+              estimate: round1(list2.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
+              items: list2,
+            })
+          }
+        }
+        return list
+      }, [scope, days, range.start, range.end])
+
+      const planRows = useMemo(() => {
+        const counter = new Map()
+        for (const item of done) {
+          const key = planLabel(item, state.items)
+          counter.set(key, (counter.get(key) || 0) + 1)
+        }
+        return Array.from(counter.entries())
+          .map((entry) => ({ key: entry[0], value: entry[1] }))
+          .sort((left, right) => right.value - left.value)
+          .slice(0, 7)
+      }, [done, state.items])
+
+      const tile = (label, value, hint, accent) =>
+        h(
+          'div',
+          cardStyle({ flex: '1 1 140px', minWidth: 130, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 2 }),
+          h('div', { style: { fontSize: 10.5, color: C.sub, letterSpacing: '.05em' } }, label),
+          h('div', { style: { fontSize: 21, fontWeight: 700, color: accent || C.text, letterSpacing: '-.02em' } }, value),
+          hint ? h('div', { style: { fontSize: 10, color: C.sub } }, hint) : null,
+        )
+
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+          h(Segmented, {
+            value: scope,
+            options: [
+              { value: 'week', label: '本周' },
+              { value: 'month', label: '本月' },
+              { value: 'quarter', label: '本季' },
+            ],
+            onChange: setScope,
+          }),
+          h('div', { style: { fontSize: 12, color: C.sub } }, range.label),
+          h('div', { style: { flex: 1 } }),
+          h('div', { style: { fontSize: 11, color: C.sub } }, range.start + ' ~ ' + range.end),
+        ),
+        h(
+          'div',
+          { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
+          tile('完成率', completion + '%', done.length + ' / ' + days.length + ' 条'),
+          tile('计划达成', planRate === null ? '—' : planRate + '%', '计划外 ' + (offRate === null ? '—' : offRate + '%'), C.brand),
+          tile('实际工时', spent + 'h', '预估 ' + estimate + 'h'),
+          tile('加班工时', overtimeHours + 'h', overtime.length + ' 条非工作日', overtimeHours ? C.warn : C.text),
+        ),
+        h(
+          'div',
+          { style: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' } },
+          h(
+            'div',
+            { style: { flex: '1 1 300px', minWidth: 270, display: 'flex' } },
+            h(
+              ChartCard,
+              { title: '任务构成', hint: '点击扇区查看清单' },
+              h(
+                'div',
+                { style: { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' } },
+                h(Donut, {
+                  segments: [
+                    { label: '计划内完成', value: donePlanned.length, color: C.brand },
+                    { label: '计划外完成', value: doneOffPlan.length, color: C.warn },
+                    { label: '未完成', value: open.length, color: C.track },
+                  ],
+                  centerValue: completion + '%',
+                  centerLabel: '完成率',
+                  onPick: (entry) => {
+                    const list =
+                      entry.label === '计划内完成' ? donePlanned : entry.label === '计划外完成' ? doneOffPlan : open
+                    setDrill({ title: entry.label, items: list })
+                  },
+                }),
+                h(
+                  'div',
+                  { style: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11.5 } },
+                  [
+                    { label: '计划内完成', value: donePlanned.length, color: C.brand },
+                    { label: '计划外完成', value: doneOffPlan.length, color: C.warn },
+                    { label: '未完成', value: open.length, color: C.track },
+                  ].map((row) =>
+                    h(
+                      'div',
+                      { key: row.label, style: { display: 'flex', alignItems: 'center', gap: 6 } },
+                      h('span', { style: { width: 8, height: 8, borderRadius: 999, background: row.color } }),
+                      h('span', { style: { color: C.sub } }, row.label),
+                      h('span', { style: { marginLeft: 'auto', fontWeight: 600 } }, row.value),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          h(
+            'div',
+            { style: { flex: '1 1 380px', minWidth: 300, display: 'flex' } },
+            h(
+              ChartCard,
+              {
+                title: '完成与工时趋势',
+                hint: '悬停看单点',
+                actions: h('span', { style: { marginLeft: 8, fontSize: 10.5, color: C.sub } }, '— 完成数　— 工时'),
+              },
+              h(LineTrend, { buckets }),
+            ),
+          ),
+        ),
+        h(
+          'div',
+          { style: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' } },
+          h(
+            'div',
+            { style: { flex: '1 1 300px', minWidth: 270, display: 'flex' } },
+            h(
+              ChartCard,
+              { title: '预估 vs 实际工时', hint: '点击实际柱查看任务' },
+              h(GroupedBars, {
+                buckets,
+                onPick: (bucket) => setDrill({ title: bucket.label + ' 的任务', items: bucket.items }),
+              }),
+            ),
+          ),
+          h(
+            'div',
+            { style: { flex: '1 1 300px', minWidth: 270, display: 'flex' } },
+            h(
+              ChartCard,
+              { title: '计划条目分布', hint: '点击查看清单' },
+              h(HBars, {
+                rows: planRows,
+                onPick: (row) =>
+                  setDrill({
+                    title: row.key,
+                    items: done.filter((item) => planLabel(item, state.items) === row.key),
+                  }),
+              }),
+            ),
+          ),
+        ),
+        drill
+          ? h(
+              Modal,
+              {
+                title: drill.title + '（' + drill.items.length + '）',
+                width: 560,
+                onClose: () => setDrill(null),
+                footer: h(
+                  'div',
+                  { style: { display: 'flex', justifyContent: 'flex-end' } },
+                  h(Btn, { onClick: () => setDrill(null) }, '关闭'),
+                ),
+              },
+              drill.items.length === 0
+                ? h('div', { style: { fontSize: 12.5, color: C.sub } }, '没有任务')
+                : drill.items.map((item) =>
+                    h(
+                      'div',
+                      {
+                        key: item.id,
+                        style: {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          fontSize: 12.5,
+                          padding: '4px 0',
+                          borderBottom: '1px solid ' + C.line,
+                        },
+                      },
+                      h('span', { style: { flex: 1 } }, item.title),
+                      h('span', { style: { color: C.sub, fontSize: 11 } }, item.date.slice(5)),
+                      h(
+                        'span',
+                        { style: { color: C.sub, fontSize: 11, width: 46, textAlign: 'right' } },
+                        item.spentH ? item.spentH + 'h' : '',
+                      ),
+                      h(
+                        'span',
+                        { style: { color: item.status === 'done' ? C.ok : C.sub, fontSize: 10.5, width: 36 } },
+                        item.status === 'done' ? '完成' : '未完成',
+                      ),
+                    ),
+                  ),
+            )
+          : null,
+      )
+    }
+
     function StatsView({ state }) {
       const today = state.today
       const anchor = mondayOf(today)
@@ -3593,6 +4072,22 @@ window.__ModuleLoader__.load({
       const [weekdayTime, setWeekdayTime] = useState(initialSchedule.weekdayTime || '18:00')
       const [fridayTime, setFridayTime] = useState(initialSchedule.fridayTime || '18:00')
       const [weeklyOnFriday, setWeeklyOnFriday] = useState(initialSchedule.weeklyOnFriday !== false)
+      const [holidaysText, setHolidaysText] = useState(
+        ((state.settings && state.settings.holidays) || []).map((entry) => entry.date + ' ' + entry.kind).join('\n'),
+      )
+
+      const parseHolidays = (text) =>
+        String(text || '')
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => {
+            const parts = line.split(/\s+/)
+            const date = parts[0]
+            const kind = (parts[1] || 'off').toLowerCase() === 'on' ? 'on' : 'off'
+            return /^\d{4}-\d{2}-\d{2}$/.test(date) ? { date, kind } : null
+          })
+          .filter(Boolean)
       return h(
         Modal,
         {
@@ -3609,6 +4104,7 @@ window.__ModuleLoader__.load({
                 onClick: () =>
                   mutate('/settings/save', {
                     exportRoot: root,
+                    holidays: parseHolidays(holidaysText),
                     schedule: {
                       enabled: scheduleEnabled,
                       weekdayTime,
@@ -3678,12 +4174,29 @@ window.__ModuleLoader__.load({
             '到点后生成草稿并在工作台顶部提示，不会自动发到钉钉。',
           ),
           h(
+            Field,
+            { label: '节假日 / 调休（每行一条：日期 off=放假 on=调休上班）' },
+            h('textarea', {
+              value: holidaysText,
+              rows: 4,
+              onChange: (event) => setHolidaysText(event.target.value),
+              placeholder: '2026-01-01 off\n2026-02-08 on',
+              style: inputStyle({ resize: 'vertical', fontFamily: 'inherit', minHeight: 84 }),
+            }),
+            h(
+              'div',
+              { style: { fontSize: 10.5, color: C.sub } },
+              '用于判断加班：周末与非工作日算加班，标记 on 的周末不算。',
+            ),
+          ),
+          h(
             Btn,
             {
               small: true,
               onClick: () =>
                 mutate('/settings/save', {
                   exportRoot: root,
+                  holidays: parseHolidays(holidaysText),
                   schedule: { enabled: scheduleEnabled, weekdayTime, fridayTime, weeklyOnFriday },
                 })
                   .then(() => call('/schedule/run', {}))
@@ -3971,7 +4484,7 @@ window.__ModuleLoader__.load({
             : tab === 'plan'
               ? h(PlanView, { state, mutate, openForm, notify })
               : tab === 'stats'
-                ? h(StatsView, { state })
+                ? h(StatsPage, { state })
                 : h(ReportDoc, { state, notify }),
           form ? h(TaskForm, { state, initial: form.initial, onClose: closeForm, onSave, onSync, notify }) : null,
           settingsOpen ? h(SettingsPanel, { state, mutate, onClose: () => setSettingsOpen(false), notify }) : null,

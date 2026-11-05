@@ -91,6 +91,23 @@ function isWeekendKey(dateStr) {
   return day === 0 || day === 6
 }
 
+function holidayMap(holidays) {
+  const map = new Map()
+  for (const entry of holidays || []) {
+    if (entry && entry.date) map.set(String(entry.date), entry.kind === 'on' ? 'on' : 'off')
+  }
+  return map
+}
+
+function isOvertimeDate(dateStr, holidays) {
+  if (!dateStr) return false
+  const map = holidayMap(holidays)
+  const marked = map.get(dateStr)
+  if (marked === 'on') return false
+  if (marked === 'off') return true
+  return isWeekendKey(dateStr)
+}
+
 function numberOrNull(value) {
   if (value === null || value === undefined || value === '') return null
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
@@ -134,9 +151,11 @@ function normalizeSettings(input) {
       fridayTime: '18:00',
       weeklyOnFriday: true,
     },
+    holidays: [],
   }
   const merged = Object.assign({}, base, input || {})
   merged.schedule = Object.assign({}, base.schedule, (input && input.schedule) || {})
+  if (!Array.isArray(merged.holidays)) merged.holidays = []
   const dingtalk = Object.assign({}, base.dingtalk, (input && input.dingtalk) || {})
   dingtalk.mapping = Object.assign({}, base.dingtalk.mapping, ((input && input.dingtalk) || {}).mapping || {})
   if (!Array.isArray(dingtalk.fields)) dingtalk.fields = []
@@ -1517,7 +1536,7 @@ export function apply(ctx) {
             标题: item.title,
             工时: item.spentH ?? item.estimateH ?? null,
             计划: planLabelOf(item),
-            周末加班: isWeekendKey(item.date),
+            周末加班: isOvertimeDate(item.date, state.settings.holidays),
           })),
           未完成: open.map((item) => item.title),
           总工时: buildReport(kind, key).sections.hours,
