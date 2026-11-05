@@ -2379,7 +2379,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, alignItems: 'stretch' } },
+          { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1fr', gap: 10, alignItems: 'stretch' } },
           h(
             'div',
             { style: { display: 'flex' } },
@@ -2446,7 +2446,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, alignItems: 'stretch' } },
+          { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1fr', gap: 10, alignItems: 'stretch' } },
           h(
             'div',
             { style: { display: 'flex' } },
