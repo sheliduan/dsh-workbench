@@ -3132,6 +3132,13 @@ window.__ModuleLoader__.load({
         )
       }, [kind, key, notify])
 
+      const exportWord = useCallback(() => {
+        call('/report/export-word', { kind, key }).then(
+          (payload) => notify('已导出 Word：' + payload.path),
+          (cause) => notify('导出 Word 失败：' + String(cause.message || cause), 'error'),
+        )
+      }, [kind, key, notify])
+
       const todayWeek = isoWeekKey(state.today)
       const atLatest =
         kind === 'daily' ? key >= state.today : kind === 'weekly' ? key >= todayWeek : key >= state.today.slice(0, 7)
@@ -3192,7 +3199,8 @@ window.__ModuleLoader__.load({
           h(Btn, { small: true, onClick: resetDefaults, disabled: busy }, '恢复默认'),
           h(Btn, { small: true, onClick: load, disabled: busy }, busy ? '刷新中…' : '刷新'),
           h(Btn, { small: true, onClick: copy }, '复制'),
-          h(Btn, { small: true, onClick: exportFile }, '导出'),
+          h(Btn, { small: true, onClick: exportFile }, '导出 MD'),
+          h(Btn, { small: true, onClick: exportWord }, '导出 Word'),
           kind === 'daily' && report ? h(Btn, { primary: true, onClick: () => setSubmitOpen(true) }, '提交钉钉') : null,
         ),
 

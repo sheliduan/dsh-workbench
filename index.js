@@ -1241,6 +1241,269 @@ export function apply(ctx) {
       .slice(0, 60)
   }
 
+  // ---------------- Word 导出 ----------------
+
+  const CRC_TABLE = (() => {
+    const table = new Uint32Array(256)
+    for (let index = 0; index < 256; index += 1) {
+      let value = index
+      for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1
+      table[index] = value >>> 0
+    }
+    return table
+  })()
+
+  function crc32(buffer) {
+    let crc = 0xffffffff
+    for (let index = 0; index < buffer.length; index += 1) {
+      crc = CRC_TABLE[(crc ^ buffer[index]) & 0xff] ^ (crc >>> 8)
+    }
+    return (crc ^ 0xffffffff) >>> 0
+  }
+
+  function zipStore(entries) {
+    const parts = []
+    const central = []
+    let offset = 0
+    for (const entry of entries) {
+      const name = Buffer.from(entry.name, 'utf8')
+      const data = Buffer.isBuffer(entry.data) ? entry.data : Buffer.from(entry.data, 'utf8')
+      const crc = crc32(data)
+      const local = Buffer.alloc(30)
+      local.writeUInt32LE(0x04034b50, 0)
+      local.writeUInt16LE(20, 4)
+      local.writeUInt16LE(0x0800, 6)
+      local.writeUInt16LE(0, 8)
+      local.writeUInt16LE(0, 10)
+      local.writeUInt16LE(0x21, 12)
+      local.writeUInt32LE(crc, 14)
+      local.writeUInt32LE(data.length, 18)
+      local.writeUInt32LE(data.length, 22)
+      local.writeUInt16LE(name.length, 26)
+      local.writeUInt16LE(0, 28)
+      parts.push(local, name, data)
+
+      const record = Buffer.alloc(46)
+      record.writeUInt32LE(0x02014b50, 0)
+      record.writeUInt16LE(20, 4)
+      record.writeUInt16LE(20, 6)
+      record.writeUInt16LE(0x0800, 8)
+      record.writeUInt16LE(0, 10)
+      record.writeUInt16LE(0, 12)
+      record.writeUInt16LE(0x21, 14)
+      record.writeUInt32LE(crc, 16)
+      record.writeUInt32LE(data.length, 20)
+      record.writeUInt32LE(data.length, 24)
+      record.writeUInt16LE(name.length, 28)
+      record.writeUInt16LE(0, 30)
+      record.writeUInt16LE(0, 32)
+      record.writeUInt16LE(0, 34)
+      record.writeUInt16LE(0, 36)
+      record.writeUInt32LE(0, 38)
+      record.writeUInt32LE(offset, 42)
+      central.push(record, name)
+      offset += local.length + name.length + data.length
+    }
+    const centralBuf = Buffer.concat(central)
+    const end = Buffer.alloc(22)
+    end.writeUInt32LE(0x06054b50, 0)
+    end.writeUInt16LE(0, 4)
+    end.writeUInt16LE(0, 6)
+    end.writeUInt16LE(entries.length, 8)
+    end.writeUInt16LE(entries.length, 10)
+    end.writeUInt32LE(centralBuf.length, 12)
+    end.writeUInt32LE(offset, 16)
+    end.writeUInt16LE(0, 20)
+    return Buffer.concat(parts.concat([centralBuf, end]))
+  }
+
+  function xmlEscape(text) {
+    return String(text === null || text === undefined ? '' : text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  function docParagraph(text, options = {}) {
+    const size = options.size || 21
+    const bold = options.bold ? '<w:b/>' : ''
+    const color = options.color ? '<w:color w:val="' + options.color + '"/>' : ''
+    const spacing = options.after === undefined ? 60 : options.after
+    const indent = options.indent ? '<w:ind w:left="' + options.indent + '"/>' : ''
+    const tabs = options.tab ? '<w:tabs><w:tab w:val="right" w:pos="8300"/></w:tabs>' : ''
+    const textXml = xmlEscape(text).replace(/\t/g, '</w:t><w:tab/><w:t xml:space="preserve">')
+    return (
+      '<w:p><w:pPr>' +
+      tabs +
+      indent +
+      '<w:spacing w:before="0" w:after="' +
+      spacing +
+      '" w:line="300" w:lineRule="auto"/>' +
+      '</w:pPr>' +
+      '<w:r><w:rPr>' +
+      bold +
+      color +
+      '<w:sz w:val="' +
+      size +
+      '"/><w:szCs w:val="' +
+      size +
+      '"/></w:rPr>' +
+      '<w:t xml:space="preserve">' +
+      textXml +
+      '</w:t></w:r></w:p>'
+    )
+  }
+
+  function buildDocx(kind, key) {
+    const report = buildReport(kind, key)
+    const days = itemsOfPeriod(kind, key)
+    const done = days.filter((item) => item.status === 'done')
+    const open = days.filter((item) => item.status !== 'done' && item.status !== 'dropped')
+
+    const groups = new Map()
+    for (const item of done) {
+      const label = planLabelOf(item)
+      if (!groups.has(label)) groups.set(label, [])
+      groups.get(label).push(item)
+    }
+
+    const title = kind === 'daily' ? '工作日报' : kind === 'weekly' ? '工作周报' : '工作月报'
+    const meta = key + '　完成 ' + done.length + '/' + days.length + '　工时 ' + report.sections.hours + 'h'
+    const body = []
+    body.push(docParagraph(title, { size: 36, bold: true, after: 80 }))
+    body.push(docParagraph(meta, { size: 18, color: '6B6B74', after: 200 }))
+
+    if (kind !== 'daily') {
+      body.push(docParagraph('一、目标推进 / 小结', { size: 24, bold: true, after: 80 }))
+      for (const line of String(report.sections.goals || '').split('\n')) {
+        body.push(docParagraph(line, { size: 21, after: 40 }))
+      }
+      body.push(docParagraph('', { size: 10, after: 60 }))
+    }
+
+    const doneTitle = kind === 'daily' ? (kind !== 'daily' ? '二、今日完成' : '一、今日完成') : '二、本期完成'
+    body.push(docParagraph(kind === 'daily' ? '一、今日完成工作' : '二、本期完成工作', { size: 24, bold: true, after: 80 }))
+    if (done.length === 0) {
+      body.push(docParagraph('　（无）', { size: 21, color: '6B6B74', after: 40 }))
+    }
+    for (const entry of groups.entries()) {
+      body.push(docParagraph(entry[0], { size: 18, color: '6B6B74', after: 30 }))
+      for (const item of entry[1]) {
+        const hours = item.spentH ?? item.estimateH
+        body.push(
+          docParagraph('· ' + item.title + (hours === null ? '' : '\t' + hours + 'h'), {
+            size: 21,
+            indent: 360,
+            tab: true,
+            after: 30,
+          }),
+        )
+      }
+    }
+
+    body.push(docParagraph('', { size: 10, after: 60 }))
+    body.push(docParagraph(kind === 'daily' ? '二、所用工时' : '三、所用工时', { size: 24, bold: true, after: 80 }))
+    body.push(docParagraph(report.sections.hours + ' h', { size: 32, bold: true, after: 160 }))
+
+    body.push(
+      docParagraph(kind === 'daily' ? '三、未完成工作和明天计划' : '四、未完成 / 下一步计划', {
+        size: 24,
+        bold: true,
+        after: 80,
+      }),
+    )
+    const leftLines = String(report.sections.left || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+    if (leftLines.length === 0) {
+      body.push(docParagraph('　（无）', { size: 21, color: '6B6B74', after: 40 }))
+    }
+    for (const line of leftLines) {
+      body.push(docParagraph(line.replace(/^·\s*/, '· '), { size: 21, indent: 360, after: 30 }))
+    }
+
+    body.push(docParagraph('', { size: 10, after: 60 }))
+    body.push(docParagraph(report.sections.stats, { size: 18, color: '6B6B74', after: 40 }))
+
+    const sectPr =
+      '<w:sectPr><w:footerReference w:type="default" r:id="rId2"/>' +
+      '<w:pgSz w:w="11906" w:h="16838"/>' +
+      '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="709" w:footer="709" w:gutter="0"/>' +
+      '</w:sectPr>'
+
+    const document =
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<w:body>' +
+      body.join('') +
+      sectPr +
+      '</w:body></w:document>'
+
+    const styles =
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      '<w:docDefaults><w:rPrDefault><w:rPr>' +
+      '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="微软雅黑" w:cs="Calibri"/>' +
+      '<w:sz w:val="21"/><w:szCs w:val="21"/>' +
+      '</w:rPr></w:rPrDefault>' +
+      '<w:pPrDefault><w:pPr><w:spacing w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault>' +
+      '</w:docDefaults></w:styles>'
+
+    const footer =
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>' +
+      '<w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r>' +
+      '<w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>' +
+      '<w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>' +
+      '</w:p></w:ftr>'
+
+    const contentTypes =
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+      '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
+      '</Types>'
+
+    const rels =
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+      '</Relationships>'
+
+    const docRels =
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' +
+      '</Relationships>'
+
+    return zipStore([
+      { name: '[Content_Types].xml', data: contentTypes },
+      { name: '_rels/.rels', data: rels },
+      { name: 'word/document.xml', data: document },
+      { name: 'word/_rels/document.xml.rels', data: docRels },
+      { name: 'word/styles.xml', data: styles },
+      { name: 'word/footer1.xml', data: footer },
+    ])
+  }
+
+  async function exportWord(kind, key) {
+    const buffer = buildDocx(kind, key)
+    const fileName = key + '.' + kind + '.docx'
+    const base = exportRootPath()
+    const target = path.join(base, reportFileName(kind, key).replace(/[^\\/]+$/, fileName))
+    await mkdir(path.dirname(target), { recursive: true })
+    await writeFile(target, buffer)
+    return { path: target }
+  }
+
   function snapshot() {
     return {
       today: todayKey(),
@@ -1498,6 +1761,10 @@ export function apply(ctx) {
       }
       if (action === '/report/export') {
         const result = await exportReport(body.kind || 'daily', body.key || todayKey())
+        return send(res, 200, { ok: true, path: result.path })
+      }
+      if (action === '/report/export-word') {
+        const result = await exportWord(body.kind || 'daily', body.key || todayKey())
         return send(res, 200, { ok: true, path: result.path })
       }
       if (action === '/narrative/save') {
