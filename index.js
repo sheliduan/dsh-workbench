@@ -1392,11 +1392,59 @@ export function apply(ctx) {
     return contents
   }
 
+  async function dwsAuthStatus() {
+    const raw = await runDws(['auth', 'status', '--format', 'json'])
+    return {
+      authenticated: Boolean(raw.authenticated),
+      tokenValid: Boolean(raw.token_valid),
+      userName: raw.user_name || '',
+      corpName: raw.corp_name || '',
+      expiresAt: raw.expires_at || '',
+    }
+  }
+
+  let refreshing = null
+
+  async function ensureDwsAuth() {
+    let current = null
+    try {
+      current = await dwsAuthStatus()
+    } catch (error) {
+      throw new Error('钉钉命令行不可用：' + String(error.message || error))
+    }
+    // 凭证有效就直接用；dws 在真正调用时会自行处理续期
+    if (current.authenticated && current.tokenValid) return current
+    if (refreshing) return refreshing
+    // 只有失效时才尝试一次静默续期，且限时，避免卡住提交
+    refreshing = (async () => {
+      try {
+        await runDws(['auth', 'login', '--recommend'], { timeout: 12000 })
+      } catch (error) {
+        // 续期失败交给下方判断
+      }
+      try {
+        return await dwsAuthStatus()
+      } catch (error) {
+        return current
+      }
+    })()
+    try {
+      const refreshed = await refreshing
+      if (!refreshed.authenticated || !refreshed.tokenValid) {
+        throw new Error('钉钉登录已失效，请在「插件 → 工作台 → 配置」里点「重新授权」')
+      }
+      return refreshed
+    } finally {
+      refreshing = null
+    }
+  }
+
   async function submitReport(body, dryRun) {
     const ding = dingtalkSettings()
     if (!ding.templateId) throw new Error('尚未选择日志模板，请先在插件配置页选择')
     const recipients = Array.isArray(body.toUserIds) ? body.toUserIds.filter(Boolean) : []
     if (recipients.length === 0) throw new Error('必须至少选择一个日志接收人，否则日志对任何人都不可见')
+    if (!dryRun) await ensureDwsAuth()
     const kind = body.kind || 'daily'
     const key = body.key || todayKey()
     const report = buildReport(kind, key)
@@ -1920,6 +1968,14 @@ export function apply(ctx) {
         state.settings = normalizeSettings({ ...(state.settings || {}), ...body })
         await save()
         return send(res, 200, { ok: true, settings: state.settings, state: snapshot() })
+      }
+      if (action === '/dws/refresh') {
+        try {
+          const status = await ensureDwsAuth()
+          return send(res, 200, { ok: true, refreshed: true, status })
+        } catch (error) {
+          return send(res, 200, { ok: false, refreshed: false, message: String(error.message || error) })
+        }
       }
       if (action === '/dws/info') {
         const launcher = await dwsLauncher()
