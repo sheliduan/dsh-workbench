@@ -2119,26 +2119,26 @@ window.__ModuleLoader__.load({
       if (rows.length === 0) return h('div', { style: { fontSize: 12, color: C.sub } }, '暂无数据')
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'center', flex: 1 } },
         rows.map((row) =>
           h(
             'div',
             {
               key: row.key,
               onClick: onPick ? () => onPick(row) : undefined,
-              style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, cursor: onPick ? 'pointer' : 'default' },
+              style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: onPick ? 'pointer' : 'default' },
             },
             h(
               'span',
-              { style: { width: 104, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+              { style: { width: 96, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: C.text } },
               row.key,
             ),
             h(
               'div',
-              { style: { flex: 1, height: 7, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+              { style: { flex: 1, height: 9, borderRadius: 999, background: C.track, overflow: 'hidden' } },
               h('div', { style: { width: Math.round((row.value / max) * 100) + '%', height: '100%', background: C.grad } }),
             ),
-            h('span', { style: { width: 30, textAlign: 'right', color: C.sub } }, row.value),
+            h('span', { style: { width: 28, textAlign: 'right', color: C.sub, fontWeight: 600 } }, row.value),
           ),
         ),
       )
@@ -2147,7 +2147,7 @@ window.__ModuleLoader__.load({
     function ChartCard({ title, hint, children, actions }) {
       return h(
         'div',
-        cardStyle({ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, width: '100%' }),
+        cardStyle({ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, width: '100%', minHeight: 214 }),
         h(
           'div',
           { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
@@ -2190,12 +2190,13 @@ window.__ModuleLoader__.load({
       const buckets = useMemo(() => {
         const list = []
         if (scope === 'week') {
+          const weekdayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
           for (let index = 0; index < 7; index += 1) {
             const dateKey = addDays(range.start, index)
             const dayItems = days.filter((item) => item.date === dateKey)
             list.push({
               key: dateKey,
-              label: dateKey.slice(8),
+              label: weekdayNames[index],
               done: dayItems.filter((item) => item.status === 'done').length,
               hours: round1(dayItems.reduce((sum, item) => sum + (item.spentH || 0), 0)),
               estimate: round1(dayItems.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
