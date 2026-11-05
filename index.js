@@ -233,6 +233,37 @@ export function apply(ctx) {
     return loading
   }
 
+  let lastBackupDay = ''
+
+  function backupDir() {
+    return path.join(root(), 'worklog', 'backups')
+  }
+
+  async function ensureDailyBackup(force) {
+    const day = todayKey()
+    if (!force && lastBackupDay === day) return null
+    const dir = backupDir()
+    const target = path.join(dir, 'workbench-' + day + '.json')
+    try {
+      await mkdir(dir, { recursive: true })
+      if (force || !existsSync(target)) {
+        await writeFile(target, JSON.stringify(state, null, 2), 'utf8')
+      }
+      lastBackupDay = day
+      const files = (await readdir(dir)).filter((name) => /^workbench-\d{4}-\d{2}-\d{2}\.json$/.test(name)).sort()
+      for (const name of files.slice(0, Math.max(0, files.length - 14))) {
+        try {
+          await unlink(path.join(dir, name))
+        } catch (error) {
+          // 忽略清理失败
+        }
+      }
+      return target
+    } catch (error) {
+      return null
+    }
+  }
+
   async function save() {
     const text = JSON.stringify(state, null, 2)
     let lastError = null
@@ -240,6 +271,7 @@ export function apply(ctx) {
       try {
         await writeText(candidate, text)
         dataFile = candidate
+        ensureDailyBackup(false)
         return
       } catch (error) {
         lastError = error
@@ -733,12 +765,12 @@ export function apply(ctx) {
     const conn = gitlabConnection()
     const payload = {
       title: String(input.title || '').trim(),
-      description: String(input.description || ''),
       milestone_id: input.milestoneId ? Number(input.milestoneId) : undefined,
       due_date: input.dueDate || undefined,
       assignee_ids: Array.isArray(input.assigneeIds) && input.assigneeIds.length ? input.assigneeIds : undefined,
       state_event: input.stateEvent || undefined,
     }
+    if (input.description !== undefined) payload.description = String(input.description)
     const issue = await gitlabRequest(
       conn,
       '/projects/' + encodeURIComponent(input.projectId) + '/issues/' + encodeURIComponent(input.iid),
@@ -784,7 +816,6 @@ export function apply(ctx) {
           projectId,
           iid,
           title: item.title,
-          description: item.note,
           milestoneId,
           dueDate,
           stateEvent,
@@ -804,7 +835,6 @@ export function apply(ctx) {
         const made = await gitlabCreateIssue({
           projectId,
           title: item.title,
-          description: item.note,
           milestoneId,
           issueType,
           dueDate,
@@ -819,7 +849,6 @@ export function apply(ctx) {
       const made = await gitlabCreateIssue({
         projectId,
         title: item.title,
-        description: item.note,
         milestoneId,
         issueType,
         dueDate,
@@ -1913,6 +1942,61 @@ export function apply(ctx) {
       action = url.pathname.slice(API_PREFIX.length) || '/'
       await ensureLoaded()
 
+      if (action === '/fs/dirs') {
+        const payload = await readBody(req)
+        const target = payload.path ? String(payload.path) : ''
+        const listDrives = () => {
+          if (process.platform !== 'win32') return ['/']
+          const drives = []
+          for (let code = 67; code <= 90; code += 1) {
+            const letter = String.fromCharCode(code) + ':\\'
+            if (existsSync(letter)) drives.push(letter)
+          }
+          return drives
+        }
+        if (!target) {
+          return send(res, 200, { ok: true, path: '', parent: null, dirs: [], drives: listDrives() })
+        }
+        try {
+          const entries = await readdir(target, { withFileTypes: true })
+          const dirs = entries
+            .filter((entry) => entry.isDirectory() && !entry.name.startsWith('$') && !entry.name.startsWith('.'))
+            .map((entry) => entry.name)
+            .sort((left, right) => left.localeCompare(right, 'zh'))
+          const parent = path.dirname(target)
+          return send(res, 200, {
+            ok: true,
+            path: target,
+            parent: parent === target ? null : parent,
+            dirs,
+            drives: [],
+          })
+        } catch (error) {
+          return send(res, 200, {
+            ok: false,
+            path: target,
+            parent: path.dirname(target),
+            dirs: [],
+            drives: [],
+            message: '无法读取该目录：' + String(error.message || error),
+          })
+        }
+      }
+      if (action === '/backup/now') {
+        const target = await ensureDailyBackup(true)
+        if (!target) throw new Error('备份失败：无法写入备份目录')
+        return send(res, 200, { ok: true, path: target })
+      }
+      if (action === '/backup/list') {
+        const dir = backupDir()
+        let files = []
+        try {
+          files = (await readdir(dir)).filter((name) => /^workbench-\d{4}-\d{2}-\d{2}\.json$/.test(name)).sort()
+        } catch (error) {
+          files = []
+        }
+        return send(res, 200, { ok: true, dir, files })
+      }
       if (action === '/ping') return send(res, 200, { ok: true, dataFile, root: root() })
       if (req.method === 'GET' && action === '/state') {
         return send(res, 200, { ok: true, state: snapshot() })

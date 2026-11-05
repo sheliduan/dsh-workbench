@@ -11,6 +11,17 @@ window.__ModuleLoader__.load({
     const h = React.createElement
     const { useCallback, useEffect, useMemo, useState } = React
 
+    // 字号只用五档：11 辅助 / 12 正文 / 13 强调 / 20 标题 / 27 大数字
+    // 圆角三档 + 胶囊
+    const R = { sm: 8, md: 12, lg: 16, pill: 999 }
+    // 间距六档
+    const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 }
+    // 阴影三档
+    const SH = {
+      card: '0 1px 2px rgba(0,0,0,.05), 0 10px 28px rgba(0,0,0,.07)',
+      soft: '0 1px 2px rgba(0,0,0,.04)',
+      pop: '0 12px 32px rgba(0,0,0,.12)',
+    }
     const C = {
       text: 'var(--dsw-alias-text-primary, #1b1b1f)',
       sub: 'var(--dsw-alias-text-secondary, #6b6b74)',
@@ -145,7 +156,7 @@ window.__ModuleLoader__.load({
           height: size,
           viewBox: '0 0 24 24',
           'aria-hidden': true,
-          style: { display: 'block', borderRadius: 7, overflow: 'hidden' },
+          style: { display: 'block', borderRadius: R.sm, overflow: 'hidden' },
         },
         h(
           'defs',
@@ -187,7 +198,7 @@ window.__ModuleLoader__.load({
             border: '1px solid ' + (primary ? 'transparent' : C.line),
             background: primary ? C.brand : 'transparent',
             color: primary ? '#fff' : C.text,
-            borderRadius: 6,
+            borderRadius: R.sm,
             cursor: disabled ? 'default' : 'pointer',
             fontWeight: primary ? 600 : 400,
             opacity: disabled ? 0.5 : 1,
@@ -203,7 +214,7 @@ window.__ModuleLoader__.load({
     function Chip({ label, value }) {
       return h(
         'div',
-        { style: { display: 'flex', alignItems: 'baseline', gap: 6, padding: '4px 10px', borderRadius: 6, background: C.soft } },
+        { style: { display: 'flex', alignItems: 'baseline', gap: S.sm, padding: '4px 10px', borderRadius: R.sm, background: C.soft } },
         h('span', { style: { fontSize: 12, color: C.sub } }, label),
         h('span', { style: { fontSize: 13, fontWeight: 600, color: C.text } }, value),
       )
@@ -212,7 +223,7 @@ window.__ModuleLoader__.load({
     function Segmented({ value, options, onChange }) {
       return h(
         'div',
-        { style: { display: 'flex', gap: 2, background: C.soft, borderRadius: 7, padding: 3 } },
+        { style: { display: 'flex', gap: S.xs, background: C.soft, borderRadius: R.sm, padding: 3 } },
         options.map((option) =>
           h(
             'button',
@@ -221,9 +232,9 @@ window.__ModuleLoader__.load({
               onClick: () => onChange(option.value),
               style: {
                 border: 'none',
-                borderRadius: 5,
+                borderRadius: R.sm,
                 padding: '4px 12px',
-                fontSize: 12.5,
+                fontSize: 12,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 background: value === option.value ? C.panel : 'transparent',
@@ -244,7 +255,7 @@ window.__ModuleLoader__.load({
           style: {
             display: 'flex',
             flexDirection: 'column',
-            gap: 4,
+            gap: S.xs,
             fontSize: 12,
             color: C.sub,
             flex: grow ? '1 1 0' : '0 0 auto',
@@ -258,7 +269,7 @@ window.__ModuleLoader__.load({
     function inputStyle(extra) {
       return {
         border: '1px solid ' + C.line,
-        borderRadius: 6,
+        borderRadius: R.sm,
         padding: '6px 8px',
         fontSize: 13,
         background: 'transparent',
@@ -307,12 +318,12 @@ window.__ModuleLoader__.load({
               overflow: 'auto',
               background: C.panel,
               color: C.text,
-              borderRadius: 18,
+              borderRadius: R.lg,
               boxShadow: '0 24px 70px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,.08)',
             },
           },
-          h('div', { style: { padding: '14px 18px', borderBottom: '1px solid ' + C.line, fontSize: 14, fontWeight: 600 } }, title),
-          h('div', { style: { padding: 18, display: 'flex', flexDirection: 'column', gap: 12 } }, children),
+          h('div', { style: { padding: '14px 18px', borderBottom: '1px solid ' + C.line, fontSize: 13, fontWeight: 600 } }, title),
+          h('div', { style: { padding: 18, display: 'flex', flexDirection: 'column', gap: S.md } }, children),
           footer ? h('div', { style: { padding: '12px 18px', borderTop: '1px solid ' + C.line } }, footer) : null,
         ),
       )
@@ -404,10 +415,10 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.sub } },
+          { style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12, color: C.sub } },
           h('span', null, '备注（Markdown）'),
           h('div', { style: { flex: 1 } }),
           h(Btn, { small: true, onClick: () => setMode(mode === 'edit' ? 'preview' : 'edit') }, mode === 'edit' ? '预览' : '编辑'),
@@ -437,8 +448,8 @@ window.__ModuleLoader__.load({
       return Object.assign(
         {
           background: C.panel,
-          borderRadius: 16,
-          boxShadow: '0 1px 2px rgba(0,0,0,.05), 0 10px 28px rgba(0,0,0,.07)',
+          borderRadius: R.lg,
+          boxShadow: SH.card,
         },
         extra || {},
       )
@@ -465,7 +476,7 @@ window.__ModuleLoader__.load({
           color: C.text,
           background: focus ? C.panel : 'transparent',
           border: '1px solid ' + (focus ? C.brandLine : C.line),
-          borderRadius: 10,
+          borderRadius: R.md,
           outline: 'none',
           resize: multiline ? 'vertical' : 'none',
           boxShadow: focus ? '0 0 0 3px ' + C.brandSoft : 'none',
@@ -505,7 +516,7 @@ window.__ModuleLoader__.load({
               width: '100%',
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: S.sm,
               height: 34,
               padding: '0 10px',
               fontSize: 13,
@@ -513,7 +524,7 @@ window.__ModuleLoader__.load({
               color: current ? C.text : C.sub,
               background: open ? C.brandSoft : 'transparent',
               border: '1px solid ' + (open ? C.brandLine : C.line),
-              borderRadius: 10,
+              borderRadius: R.md,
               cursor: disabled ? 'default' : 'pointer',
               opacity: disabled ? 0.55 : 1,
               textAlign: 'left',
@@ -525,7 +536,7 @@ window.__ModuleLoader__.load({
             { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
             current ? current.label : placeholder || '请选择',
           ),
-          h('span', { style: { fontSize: 8, color: C.sub, transform: open ? 'rotate(180deg)' : 'none' } }, '▼'),
+          h('span', { style: { fontSize: 11, color: C.sub, transform: open ? 'rotate(180deg)' : 'none' } }, '▼'),
         ),
         open
           ? h(
@@ -538,7 +549,7 @@ window.__ModuleLoader__.load({
                   left: 0,
                   right: 0,
                   background: C.panel,
-                  borderRadius: 12,
+                  borderRadius: R.md,
                   boxShadow: '0 14px 36px rgba(0,0,0,.18)',
                   padding: 4,
                   maxHeight: 240,
@@ -558,7 +569,7 @@ window.__ModuleLoader__.load({
                     },
                     style: {
                       padding: '7px 10px',
-                      borderRadius: 8,
+                      borderRadius: R.sm,
                       fontSize: 13,
                       cursor: 'pointer',
                       color: C.text,
@@ -612,11 +623,11 @@ window.__ModuleLoader__.load({
               minHeight: 34,
               display: 'flex',
               flexWrap: 'wrap',
-              gap: 4,
+              gap: S.xs,
               alignItems: 'center',
               padding: '4px 8px',
               border: '1px solid ' + (open ? C.brandLine : C.line),
-              borderRadius: 10,
+              borderRadius: R.md,
               cursor: 'pointer',
               background: open ? C.brandSoft : 'transparent',
             },
@@ -628,14 +639,14 @@ window.__ModuleLoader__.load({
                   'span',
                   {
                     key: option.value,
-                    style: { padding: '1px 8px', borderRadius: 999, background: C.brandSoft, fontSize: 11.5, color: C.text },
+                    style: { padding: '1px 8px', borderRadius: R.pill, background: C.brandSoft, fontSize: 12, color: C.text },
                   },
                   option.label,
                 ),
               ),
           h(
             'span',
-            { style: { marginLeft: 'auto', fontSize: 8, color: C.sub, transform: open ? 'rotate(180deg)' : 'none' } },
+            { style: { marginLeft: 'auto', fontSize: 11, color: C.sub, transform: open ? 'rotate(180deg)' : 'none' } },
             '▼',
           ),
         ),
@@ -652,7 +663,7 @@ window.__ModuleLoader__.load({
                   maxHeight: 220,
                   overflow: 'auto',
                   background: C.panel,
-                  borderRadius: 12,
+                  borderRadius: R.md,
                   boxShadow: '0 14px 36px rgba(0,0,0,.18)',
                   padding: 4,
                 },
@@ -671,9 +682,9 @@ window.__ModuleLoader__.load({
                     style: {
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 8,
+                      gap: S.sm,
                       padding: '7px 10px',
-                      borderRadius: 8,
+                      borderRadius: R.sm,
                       fontSize: 13,
                       cursor: 'pointer',
                       background: active ? C.brandSoft : 'transparent',
@@ -712,29 +723,29 @@ window.__ModuleLoader__.load({
         cardStyle({ padding: '12px 14px' }),
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 } },
+          { style: { display: 'flex', alignItems: 'baseline', gap: S.sm, marginBottom: 8 } },
           h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, '近 7 天'),
-          h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, '实心=完成数　空心=工时'),
+          h('span', { style: { marginLeft: 'auto', fontSize: 11, color: C.sub } }, '实心=完成数　空心=工时'),
         ),
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'flex-end', gap: 8, height: 86 } },
+          { style: { display: 'flex', alignItems: 'flex-end', gap: S.sm, height: 86 } },
           days.map((day) =>
             h(
               'div',
               {
                 key: day.key,
-                style: { flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 },
+                style: { flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: S.sm },
               },
               h(
                 'div',
-                { style: { display: 'flex', alignItems: 'flex-end', gap: 3, height: 58 } },
+                { style: { display: 'flex', alignItems: 'flex-end', gap: S.xs, height: 58 } },
                 h('div', {
                   title: '完成 ' + day.done + ' 条',
                   style: {
                     width: 9,
                     height: Math.max(3, Math.round((day.done / maxDone) * 58)),
-                    borderRadius: 3,
+                    borderRadius: R.sm,
                     background: C.grad,
                     transition: 'height .3s ease',
                   },
@@ -744,13 +755,13 @@ window.__ModuleLoader__.load({
                   style: {
                     width: 9,
                     height: Math.max(3, Math.round((day.spent / maxSpent) * 58)),
-                    borderRadius: 3,
+                    borderRadius: R.sm,
                     background: 'transparent',
                     border: '1px solid ' + C.brandLine,
                   },
                 }),
               ),
-              h('div', { style: { fontSize: 10, color: C.sub } }, day.label),
+              h('div', { style: { fontSize: 11, color: C.sub } }, day.label),
             ),
           ),
         ),
@@ -990,7 +1001,7 @@ window.__ModuleLoader__.load({
           onClose,
           footer: h(
             'div',
-            { style: { display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' } },
+            { style: { display: 'flex', gap: S.sm, justifyContent: 'flex-end', alignItems: 'center' } },
             error ? h('div', { style: { flex: 1, color: C.danger, fontSize: 12 } }, error) : null,
             h(Btn, { onClick: onClose }, '取消'),
             isDay && gitlabProjects.length > 0
@@ -1001,7 +1012,7 @@ window.__ModuleLoader__.load({
         },
         h(
           'div',
-          { onKeyDown, style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+          { onKeyDown, style: { display: 'flex', flexDirection: 'column', gap: S.md } },
           missing
             ? h(
                 'div',
@@ -1009,12 +1020,12 @@ window.__ModuleLoader__.load({
                   style: {
                     border: '1px solid color-mix(in srgb, ' + C.danger + ' 32%, transparent)',
                     background: 'color-mix(in srgb, ' + C.danger + ' 8%, transparent)',
-                    borderRadius: 10,
+                    borderRadius: R.md,
                     padding: '10px 12px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 10,
-                    fontSize: 12.5,
+                    gap: S.md,
+                    fontSize: 12,
                   },
                 },
                 h('span', { style: { flex: 1, lineHeight: 1.6 } }, missing.message),
@@ -1030,7 +1041,7 @@ window.__ModuleLoader__.load({
           })),
           h(
             'div',
-            { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
+            { style: { display: 'flex', gap: S.md, flexWrap: 'wrap' } },
             h(
               Field,
               { label: isDay ? '日期' : '所属周期', grow: true },
@@ -1066,7 +1077,7 @@ window.__ModuleLoader__.load({
           isDay
             ? h(
                 'div',
-                { style: { display: 'flex', gap: 10 } },
+                { style: { display: 'flex', gap: S.md } },
                 h(
                   Field,
                   { label: '归属周条目（可多选）', grow: true },
@@ -1093,11 +1104,11 @@ window.__ModuleLoader__.load({
                 {
                   style: {
                     border: '1px solid ' + C.line,
-                    borderRadius: 8,
+                    borderRadius: R.sm,
                     padding: '10px 12px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 8,
+                    gap: S.sm,
                     background: C.soft,
                   },
                 },
@@ -1108,7 +1119,7 @@ window.__ModuleLoader__.load({
                 ),
                 h(
                   'div',
-                  { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
+                  { style: { display: 'flex', gap: S.sm, flexWrap: 'wrap' } },
                   h(
                     Field,
                     { label: '项目', grow: true },
@@ -1154,7 +1165,7 @@ window.__ModuleLoader__.load({
             : null,
           h(
             'div',
-            { style: { display: 'flex', gap: 10, flexWrap: 'wrap', paddingTop: 2 } },
+            { style: { display: 'flex', gap: S.md, flexWrap: 'wrap', paddingTop: 2 } },
             isDay
               ? null
               : h(Field, { label: '截止日', grow: true }, h(TextInput, {
@@ -1199,9 +1210,9 @@ window.__ModuleLoader__.load({
           style: {
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: S.md,
             padding: '10px 10px',
-            borderRadius: 8,
+            borderRadius: R.sm,
             borderBottom: '1px solid ' + C.line,
             background: hover ? C.brandSoft : 'transparent',
             transition: 'background .12s ease',
@@ -1228,10 +1239,10 @@ window.__ModuleLoader__.load({
               {
                 title: '周末工作，自动记为加班',
                 style: {
-                  fontSize: 10,
+                  fontSize: 11,
                   color: C.warn,
                   border: '1px solid ' + C.warn,
-                  borderRadius: 4,
+                  borderRadius: R.sm,
                   padding: '0 4px',
                   lineHeight: 1.5,
                 },
@@ -1278,7 +1289,7 @@ window.__ModuleLoader__.load({
               {
                 onClick: () => onDelete(item),
                 title: '删除',
-                style: { border: 'none', background: 'transparent', color: C.sub, cursor: 'pointer', fontSize: 14 },
+                style: { border: 'none', background: 'transparent', color: C.sub, cursor: 'pointer', fontSize: 13 },
               },
               '×',
             )
@@ -1306,11 +1317,11 @@ window.__ModuleLoader__.load({
       }
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.lg } },
         order.map((project) =>
           h(
             'div',
-            { key: project, style: { display: 'flex', flexDirection: 'column', gap: 1 } },
+            { key: project, style: { display: 'flex', flexDirection: 'column', gap: S.xs } },
             h('div', { style: { fontSize: 12, color: C.sub, padding: '0 0 4px' } }, project),
             groups.get(project).map((item) => h(TaskRow, { key: item.id, item, onToggle, onEdit, onDelete, onComplete })),
           ),
@@ -1348,7 +1359,7 @@ window.__ModuleLoader__.load({
             y: '50%',
             textAnchor: 'middle',
             dominantBaseline: 'central',
-            fontSize: 15,
+            fontSize: 13,
             fontWeight: 700,
             fill: C.text,
           },
@@ -1363,15 +1374,15 @@ window.__ModuleLoader__.load({
         {
           style: {
             border: '1px solid ' + C.line,
-            borderRadius: 12,
+            borderRadius: R.md,
             padding: '9px 12px',
             display: 'flex',
             alignItems: 'baseline',
-            gap: 8,
+            gap: S.sm,
           },
         },
         h('span', { style: { fontSize: 11, color: C.sub } }, label),
-        h('span', { style: { marginLeft: 'auto', fontSize: 15, fontWeight: 700, color: accent || C.text } }, value),
+        h('span', { style: { marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: accent || C.text } }, value),
       )
     }
 
@@ -1386,11 +1397,11 @@ window.__ModuleLoader__.load({
         {
           style: {
             border: '1px solid ' + C.line,
-            borderRadius: 12,
+            borderRadius: R.md,
             padding: '9px 12px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 7,
+            gap: S.sm,
           },
         },
         h(
@@ -1401,7 +1412,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { height: 6, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+          { style: { height: 6, borderRadius: R.pill, background: C.track, overflow: 'hidden' } },
           h('div', { style: { width: pct + '%', height: '100%', background: C.grad, transition: 'width .35s ease' } }),
         ),
       )
@@ -1416,7 +1427,7 @@ window.__ModuleLoader__.load({
       if (weeks.length === 0) return null
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 10 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.sm, paddingTop: 10 } },
         h('div', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, '本周计划条目'),
         weeks.map((week) => {
           const kids = days.filter((item) => item.parentId === week.id)
@@ -1430,17 +1441,17 @@ window.__ModuleLoader__.load({
               style: {
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: S.md,
                 padding: '9px 12px',
                 border: '1px solid ' + C.line,
-                borderRadius: 10,
+                borderRadius: R.md,
               },
             },
-            h('span', { style: { flex: 1, fontSize: 12.5, minWidth: 0 } }, week.title),
+            h('span', { style: { flex: 1, fontSize: 12, minWidth: 0 } }, week.title),
             h('span', { style: { fontSize: 11, color: C.sub, width: 54, textAlign: 'right' } }, kids.length ? done + '/' + kids.length : '未拆解'),
             h(
               'div',
-              { style: { width: 96, height: 5, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+              { style: { width: 96, height: 5, borderRadius: R.pill, background: C.track, overflow: 'hidden' } },
               h('div', { style: { width: pct + '%', height: '100%', background: C.grad } }),
             ),
             h('span', { style: { fontSize: 11, color: C.sub, width: 44, textAlign: 'right' } }, spent ? spent + 'h' : ''),
@@ -1459,7 +1470,7 @@ window.__ModuleLoader__.load({
           onClose: onCancel,
           footer: h(
             'div',
-            { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
+            { style: { display: 'flex', justifyContent: 'flex-end', gap: S.sm } },
             h(Btn, { onClick: onCancel }, cancelText || '取消'),
             h(
               'button',
@@ -1469,7 +1480,7 @@ window.__ModuleLoader__.load({
                   border: 'none',
                   background: danger ? C.danger : C.grad,
                   color: '#fff',
-                  borderRadius: 8,
+                  borderRadius: R.sm,
                   padding: '7px 16px',
                   fontSize: 13,
                   fontWeight: 600,
@@ -1484,7 +1495,7 @@ window.__ModuleLoader__.load({
         },
         h(
           'div',
-          { style: { display: 'flex', gap: 10, alignItems: 'flex-start' } },
+          { style: { display: 'flex', gap: S.md, alignItems: 'flex-start' } },
           h(
             'div',
             {
@@ -1492,13 +1503,13 @@ window.__ModuleLoader__.load({
                 flex: '0 0 auto',
                 width: 28,
                 height: 28,
-                borderRadius: 999,
+                borderRadius: R.pill,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 background: danger ? 'color-mix(in srgb, ' + C.danger + ' 14%, transparent)' : C.brandSoft,
                 color: danger ? C.danger : C.brand,
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 700,
               },
             },
@@ -1506,9 +1517,249 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { flex: 1, display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 2 } },
-            h('div', { style: { fontSize: 13.5, lineHeight: 1.6 } }, message),
-            detail ? h('div', { style: { fontSize: 11.5, color: C.sub, lineHeight: 1.6 } }, detail) : null,
+            { style: { flex: 1, display: 'flex', flexDirection: 'column', gap: S.sm, paddingTop: 2 } },
+            h('div', { style: { fontSize: 13, lineHeight: 1.6 } }, message),
+            detail ? h('div', { style: { fontSize: 12, color: C.sub, lineHeight: 1.6 } }, detail) : null,
+          ),
+        ),
+      )
+    }
+
+    const focusTimer = { minutes: 25, endsAt: 0, running: false }
+
+    function FocusTimer() {
+      const [version, setVersion] = useState(0)
+      const [dragging, setDragging] = useState(false)
+      const svgRef = React.useRef(null)
+      const refresh = useCallback(() => setVersion((value) => value + 1), [])
+
+      const running = focusTimer.running
+      const leftMs = running ? Math.max(0, focusTimer.endsAt - Date.now()) : 0
+      const leftMinutes = leftMs / 60000
+
+      useEffect(() => {
+        if (!running) return undefined
+        const timer = window.setInterval(() => {
+          if (focusTimer.endsAt - Date.now() <= 0) {
+            focusTimer.running = false
+            focusTimer.endsAt = 0
+            toast('专注结束，起来活动一下')
+          }
+          refresh()
+        }, 500)
+        return () => window.clearInterval(timer)
+      }, [running, refresh])
+
+      const dialSize = 200
+      const center = dialSize / 2
+      const radius = 88
+      const showMinutes = running ? leftMinutes : focusTimer.minutes
+      const angle = (Math.min(90, Math.max(0, showMinutes)) / 90) * 360
+      const circumference = 2 * Math.PI * radius
+
+      const setFromPointer = useCallback((event) => {
+        const node = svgRef.current
+        if (!node) return
+        const rect = node.getBoundingClientRect()
+        const cx = rect.left + rect.width / 2
+        const cy = rect.top + rect.height / 2
+        let degrees = (Math.atan2(event.clientX - cx, -(event.clientY - cy)) * 180) / Math.PI
+        if (degrees < 0) degrees += 360
+        let minutes = (degrees / 360) * 90
+        const step = event.shiftKey ? 1 : 5
+        minutes = Math.round(minutes / step) * step
+        focusTimer.minutes = Math.min(90, Math.max(5, minutes))
+        focusTimer.endsAt = 0
+        focusTimer.running = false
+        refresh()
+      }, [refresh])
+
+      const onPointerDown = useCallback(
+        (event) => {
+          if (focusTimer.running) return
+          const node = svgRef.current
+          if (!node) return
+          const rect = node.getBoundingClientRect()
+          const cx = rect.left + rect.width / 2
+          const cy = rect.top + rect.height / 2
+          const distance = Math.hypot(event.clientX - cx, event.clientY - cy)
+          const scale = rect.width / dialSize
+          if (distance < 30 * scale || distance > radius * scale + 20 * scale) return
+          event.preventDefault()
+          setDragging(true)
+          if (node.setPointerCapture) node.setPointerCapture(event.pointerId)
+          setFromPointer(event)
+        },
+        [radius, setFromPointer],
+      )
+
+      const onPointerMove = useCallback(
+        (event) => {
+          if (!dragging) return
+          event.preventDefault()
+          setFromPointer(event)
+        },
+        [dragging, setFromPointer],
+      )
+
+      const stopDrag = useCallback(() => setDragging(false), [])
+
+      const toggle = useCallback(() => {
+        if (focusTimer.running) {
+          const left = Math.max(0, focusTimer.endsAt - Date.now())
+          focusTimer.running = false
+          focusTimer.minutes = Math.max(5, Math.round(left / 60000) || 5)
+          focusTimer.endsAt = 0
+          toast('已暂停')
+        } else {
+          focusTimer.endsAt = Date.now() + focusTimer.minutes * 60000
+          focusTimer.running = true
+          toast('开始专注 ' + focusTimer.minutes + ' 分钟')
+        }
+        refresh()
+      }, [refresh])
+
+      const reset = useCallback(() => {
+        focusTimer.running = false
+        focusTimer.endsAt = 0
+        focusTimer.minutes = 25
+        refresh()
+      }, [refresh])
+
+      const display = running
+        ? Math.floor(leftMs / 60000) + ':' + String(Math.floor((leftMs % 60000) / 1000)).padStart(2, '0')
+        : String(focusTimer.minutes)
+
+      return h(
+        'div',
+        cardStyle({ padding: '16px 16px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: S.md }),
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'baseline', gap: S.sm, width: '100%' } },
+          h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.06em' } }, '专注'),
+          h(
+            'span',
+            { style: { marginLeft: 'auto', fontSize: 11, color: dragging ? C.brand : C.sub } },
+            running ? '计时中' : dragging ? '松手确定' : '拖动圆点',
+          ),
+        ),
+        h(
+          'div',
+          {
+            style: { position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' },
+            onDoubleClick: reset,
+            onWheel: (event) => {
+              if (focusTimer.running) return
+              event.preventDefault()
+              const step = event.shiftKey ? 1 : 5
+              focusTimer.minutes = Math.min(90, Math.max(5, focusTimer.minutes + (event.deltaY < 0 ? step : -step)))
+              refresh()
+            },
+          },
+          h(
+            'svg',
+            {
+              ref: svgRef,
+              viewBox: '0 0 ' + dialSize + ' ' + dialSize,
+              style: {
+                width: '100%',
+                maxWidth: 200,
+                cursor: running ? 'default' : dragging ? 'grabbing' : 'grab',
+                touchAction: 'none',
+                userSelect: 'none',
+              },
+              onPointerDown,
+              onPointerMove,
+              onPointerUp: stopDrag,
+              onPointerCancel: stopDrag,
+              onPointerLeave: stopDrag,
+            },
+            h('circle', { cx: center, cy: center, r: radius, fill: 'none', stroke: C.track, strokeWidth: 6 }),
+            h('circle', {
+              cx: center,
+              cy: center,
+              r: radius,
+              fill: 'none',
+              stroke: running ? C.brand : C.brandLine,
+              strokeWidth: 10,
+              strokeLinecap: 'round',
+              strokeDasharray:
+                (running ? leftMinutes / Math.max(1, focusTimer.minutes) : angle / 360) * circumference + ' ' + circumference,
+              transform: 'rotate(-90 ' + center + ' ' + center + ')',
+              style: { transition: dragging ? 'none' : 'stroke-dasharray .35s ease' },
+            }),
+            running
+              ? null
+              : h('circle', {
+                  cx: center + Math.sin((angle * Math.PI) / 180) * radius,
+                  cy: center - Math.cos((angle * Math.PI) / 180) * radius,
+                  r: 8,
+                  fill: C.panel,
+                  stroke: C.brand,
+                  strokeWidth: 3,
+                }),
+            h(
+              'text',
+              {
+                x: center,
+                y: center + 6,
+                textAnchor: 'middle',
+                fontSize: running ? 30 : 38,
+                fontWeight: 700,
+                fill: C.text,
+                letterSpacing: '-.03em',
+                style: { fontVariantNumeric: 'tabular-nums' },
+              },
+              display,
+            ),
+            h(
+              'text',
+              { x: center, y: center + 26, textAnchor: 'middle', fontSize: 11, fill: C.sub, letterSpacing: '.08em' },
+              running ? '剩余' : '分钟',
+            ),
+          ),
+        ),
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'center', gap: S.md } },
+          h(
+            'button',
+            {
+              onClick: toggle,
+              title: running ? '暂停' : '开始',
+              style: {
+                width: 38,
+                height: 38,
+                borderRadius: R.pill,
+                border: 'none',
+                background: running ? C.soft : C.grad,
+                color: running ? C.text : '#fff',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: running ? 'none' : SH.soft,
+              },
+            },
+            running ? '❚❚' : '▶',
+          ),
+          h(
+            'button',
+            {
+              onClick: reset,
+              style: {
+                border: 'none',
+                background: 'transparent',
+                color: C.sub,
+                fontSize: 12,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                padding: '4px 6px',
+              },
+            },
+            '重置',
           ),
         ),
       )
@@ -1578,21 +1829,21 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' } },
+        { style: { display: 'flex', gap: S.lg, alignItems: 'flex-start', flexWrap: 'wrap' } },
         h(
           'div',
-          { style: { flex: '1 1 520px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 } },
+          { style: { flex: '1 1 520px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: S.md } },
           h(
             'div',
-            { style: { display: 'flex', alignItems: 'baseline', gap: 10, padding: '0 2px', flexWrap: 'wrap' } },
+            { style: { display: 'flex', alignItems: 'baseline', gap: S.md, padding: '0 2px', flexWrap: 'wrap' } },
             h(
               'div',
-              { style: { fontSize: 19, fontWeight: 700, letterSpacing: '-.02em' } },
+              { style: { fontSize: 20, fontWeight: 700, letterSpacing: '-.02em' } },
               stats.open === 0 ? (stats.total === 0 ? '今天还没开始' : '今天全部完成 🎉') : '还剩 ' + stats.open + ' 件事',
             ),
             h(
               'div',
-              { style: { fontSize: 11.5, color: C.sub } },
+              { style: { fontSize: 12, color: C.sub } },
               stats.open === 0
                 ? '已完成 ' + stats.done + ' 条 · 实际 ' + stats.spent + 'h'
                 : '预计还需 ' + stats.openH + 'h · 已完成 ' + stats.done + '/' + stats.total,
@@ -1600,7 +1851,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+            { style: { display: 'flex', gap: S.sm, alignItems: 'center', flexWrap: 'wrap' } },
             h(
               'button',
               {
@@ -1609,7 +1860,7 @@ window.__ModuleLoader__.load({
                   border: 'none',
                   background: C.grad,
                   color: '#fff',
-                  borderRadius: 8,
+                  borderRadius: R.sm,
                   padding: '7px 14px',
                   fontSize: 13,
                   fontWeight: 600,
@@ -1644,18 +1895,6 @@ window.__ModuleLoader__.load({
               },
               '顺延未完成',
             ),
-            h(
-              Btn,
-              {
-                small: true,
-                onClick: () =>
-                  mutate('/export', { date: today }).then(
-                    (payload) => notify('已导出：' + payload.path),
-                    (cause) => notify('导出失败：' + String(cause.message || cause), 'error'),
-                  ),
-              },
-              '导出日报',
-            ),
           ),
           h(GroupedList, {
             items,
@@ -1671,24 +1910,24 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { flex: '0 1 232px', minWidth: 210, display: 'flex', flexDirection: 'column', gap: 10 } },
+          { style: { flex: '0 1 232px', minWidth: 210, display: 'flex', flexDirection: 'column', gap: S.md } },
           h(
             'div',
             {
               style: {
                 border: '1px solid ' + C.line,
-                borderRadius: 14,
+                borderRadius: R.lg,
                 padding: 14,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 14,
+                gap: S.lg,
                 background: 'linear-gradient(135deg, ' + C.brandSoft + ', transparent 70%)',
               },
             },
             h(Ring, { value: stats.total === 0 ? 0 : stats.done / stats.total }),
             h(
               'div',
-              { style: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 } },
+              { style: { display: 'flex', flexDirection: 'column', gap: S.xs, minWidth: 0 } },
               h('div', { style: { fontSize: 11, color: C.sub, letterSpacing: '.04em' } }, '今日完成'),
               h('div', { style: { fontSize: 20, fontWeight: 700, lineHeight: 1.2 } }, stats.done + ' / ' + stats.total),
               h(
@@ -1701,6 +1940,7 @@ window.__ModuleLoader__.load({
           h(MiniStat, { label: '预估工时', value: stats.estimate + 'h', accent: C.brand }),
           h(MiniStat, { label: '实际工时', value: stats.spent + 'h', accent: C.ok }),
           h(WeekProgress, { state }),
+          h(FocusTimer),
         ),
         pending && pending.kind === 'delete'
           ? h(ConfirmDialog, {
@@ -1746,7 +1986,7 @@ window.__ModuleLoader__.load({
       }, [goal.current])
       return h(
         'div',
-        { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 12.5 } },
+        { style: { display: 'flex', alignItems: 'center', gap: S.sm, padding: '5px 0', fontSize: 12 } },
         h('span', { style: { flex: 1 } }, goal.title),
         h('span', { style: { color: C.sub, fontSize: 12 } }, '目标 ' + (goal.target === null ? '—' : goal.target + (goal.unit || ''))),
         h('input', {
@@ -1853,10 +2093,10 @@ window.__ModuleLoader__.load({
       if (mode === 'month') {
         return h(
           'div',
-          { style: { display: 'flex', flexDirection: 'column', gap: 18 } },
+          { style: { display: 'flex', flexDirection: 'column', gap: S.xl } },
           h(
             'div',
-            { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+            { style: { display: 'flex', alignItems: 'center', gap: S.sm, flexWrap: 'wrap' } },
             h(Segmented, {
               value: mode,
               options: [
@@ -1881,7 +2121,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+            cardStyle({ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: S.sm }),
             h('div', { style: { fontSize: 12, color: C.sub } }, `本月条目 ${monthItems.length} 个`),
             monthItems.length === 0
               ? h('div', { style: { fontSize: 13, color: C.sub } }, '还没有月条目。')
@@ -1893,10 +2133,11 @@ window.__ModuleLoader__.load({
                       style: {
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 8,
-                        padding: '8px 10px',
-                        border: '1px solid ' + C.line,
-                        borderRadius: 8,
+                        gap: S.sm,
+                        padding: '10px 12px',
+                        background: C.panel,
+                        borderRadius: R.md,
+                        boxShadow: SH.soft,
                       },
                     },
                     h(
@@ -1920,10 +2161,10 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 18 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.xl } },
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+          { style: { display: 'flex', alignItems: 'center', gap: S.sm, flexWrap: 'wrap' } },
           h(Segmented, {
             value: mode,
             options: [
@@ -1948,7 +2189,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+          cardStyle({ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: S.sm }),
           h('div', { style: { fontSize: 12, color: C.sub } }, `本周条目 ${weekItems.length} 个`),
           weekItems.length === 0
             ? h('div', { style: { color: C.sub, fontSize: 13, padding: '10px 0' } }, '这一周还没有计划条目。先建一条，再把任务归到它下面。')
@@ -1958,17 +2199,18 @@ window.__ModuleLoader__.load({
                   {
                     key: item.id,
                     style: {
-                      border: '1px solid ' + C.line,
-                      borderRadius: 10,
-                      padding: '10px 12px',
+                      background: C.panel,
+                      borderRadius: R.lg,
+                      padding: '12px 14px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 6,
+                      gap: S.sm,
+                      boxShadow: SH.soft,
                     },
                   },
                   h(
                     'div',
-                    { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+                    { style: { display: 'flex', alignItems: 'center', gap: S.md } },
                     h(
                       'span',
                       { onClick: () => openForm(item), style: { flex: 1, cursor: 'pointer', fontWeight: 600 } },
@@ -2003,7 +2245,7 @@ window.__ModuleLoader__.load({
                     : childrenOf(item.id).map((child) =>
                         h(
                           'div',
-                          { key: child.id, style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 } },
+                          { key: child.id, style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12 } },
                           h(
                             'span',
                             {
@@ -2027,7 +2269,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+          { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
           h('div', { style: { fontSize: 12, color: C.sub } }, `未归拢收件箱 ${unassigned.length} 条（本周内没有归属的任务）`),
           unassigned.length === 0
             ? h('div', { style: { fontSize: 13, color: C.sub } }, '干净，没有未归拢的任务。')
@@ -2036,9 +2278,9 @@ window.__ModuleLoader__.load({
                   'div',
                   {
                     key: item.id,
-                    style: { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, background: C.soft },
+                    style: { display: 'flex', alignItems: 'center', gap: S.sm, padding: '6px 8px', borderRadius: R.sm, background: C.soft },
                   },
-                  h('span', { style: { flex: 1, fontSize: 12.5 } }, item.title),
+                  h('span', { style: { flex: 1, fontSize: 12 } }, item.title),
                   h('span', { style: { fontSize: 11, color: C.sub } }, item.date.slice(5)),
                   h(
                     'select',
@@ -2065,15 +2307,15 @@ window.__ModuleLoader__.load({
           style: {
             flex: '1 1 0',
             border: '1px solid ' + C.line,
-            borderRadius: 10,
+            borderRadius: R.md,
             padding: '14px 16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 4,
+            gap: S.xs,
           },
         },
         h('div', { style: { fontSize: 12, color: C.sub } }, label),
-        h('div', { style: { fontSize: 22, fontWeight: 600 } }, value),
+        h('div', { style: { fontSize: 20, fontWeight: 600 } }, value),
         hint ? h('div', { style: { fontSize: 11, color: C.sub } }, hint) : null,
       )
     }
@@ -2152,12 +2394,12 @@ window.__ModuleLoader__.load({
         }),
         h(
           'text',
-          { x: '50%', y: '47%', textAnchor: 'middle', dominantBaseline: 'central', fontSize: 22, fontWeight: 700, fill: C.text },
+          { x: '50%', y: '47%', textAnchor: 'middle', dominantBaseline: 'central', fontSize: 20, fontWeight: 700, fill: C.text },
           centerValue,
         ),
         h(
           'text',
-          { x: '50%', y: '63%', textAnchor: 'middle', dominantBaseline: 'central', fontSize: 10, fill: C.sub },
+          { x: '50%', y: '63%', textAnchor: 'middle', dominantBaseline: 'central', fontSize: 11, fill: C.sub },
           centerLabel,
         ),
       )
@@ -2204,7 +2446,7 @@ window.__ModuleLoader__.load({
           Math.round((index + 1) % Math.max(1, Math.ceil(buckets.length / 7))) === 0 || index === buckets.length - 1
             ? h(
                 'text',
-                { key: 'l' + bucket.key, x: padX + stepX * index, y: height - 6, textAnchor: 'middle', fontSize: 9, fill: C.sub },
+                { key: 'l' + bucket.key, x: padX + stepX * index, y: height - 6, textAnchor: 'middle', fontSize: 11, fill: C.sub },
                 bucket.label,
               )
             : null,
@@ -2242,12 +2484,12 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 11.5, color: C.sub } },
+          { style: { display: 'flex', alignItems: 'baseline', gap: S.md, fontSize: 12, color: C.sub } },
           h('span', null, '已累计完成'),
-          h('span', { style: { fontSize: 18, fontWeight: 700, color: C.text } }, finalActual + ' / ' + totalScope),
+          h('span', { style: { fontSize: 20, fontWeight: 700, color: C.text } }, finalActual + ' / ' + totalScope),
           h(
             'span',
             { style: { marginLeft: 'auto', color: gap >= 0 ? C.ok : C.danger } },
@@ -2294,7 +2536,7 @@ window.__ModuleLoader__.load({
             Math.round((index + 1) % Math.max(1, Math.ceil(n / 7))) === 0 || index === n - 1
               ? h(
                   'text',
-                  { key: 'l' + bucket.key, x: padX + stepX * index, y: height - 6, textAnchor: 'middle', fontSize: 9, fill: C.sub },
+                  { key: 'l' + bucket.key, x: padX + stepX * index, y: height - 6, textAnchor: 'middle', fontSize: 11, fill: C.sub },
                   bucket.label,
                 )
               : null,
@@ -2307,17 +2549,17 @@ window.__ModuleLoader__.load({
       const maxValue = Math.max(1, ...buckets.map((bucket) => Math.max(bucket.estimate, bucket.hours)))
       return h(
         'div',
-        { style: { display: 'flex', alignItems: 'flex-end', gap: 8, height: 178, padding: '0 4px', overflowX: 'auto' } },
+        { style: { display: 'flex', alignItems: 'flex-end', gap: S.sm, height: 178, padding: '0 4px', overflowX: 'auto' } },
         buckets.map((bucket) =>
           h(
             'div',
-            { key: bucket.key, style: { flex: '1 1 0', minWidth: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
+            { key: bucket.key, style: { flex: '1 1 0', minWidth: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: S.xs } },
             h(
               'div',
-              { style: { display: 'flex', alignItems: 'flex-end', gap: 4, height: 130 } },
+              { style: { display: 'flex', alignItems: 'flex-end', gap: S.xs, height: 130 } },
               h('div', {
                 title: bucket.label + ' 预估 ' + bucket.estimate + 'h',
-                style: { width: 12, height: Math.max(2, Math.round((bucket.estimate / maxValue) * 130)), borderRadius: 3, background: C.track },
+                style: { width: 12, height: Math.max(2, Math.round((bucket.estimate / maxValue) * 130)), borderRadius: R.sm, background: C.track },
               }),
               h('div', {
                 title: bucket.label + ' 实际 ' + bucket.hours + 'h',
@@ -2325,13 +2567,13 @@ window.__ModuleLoader__.load({
                 style: {
                   width: 12,
                   height: Math.max(2, Math.round((bucket.hours / maxValue) * 130)),
-                  borderRadius: 3,
+                  borderRadius: R.sm,
                   background: C.grad,
                   cursor: onPick ? 'pointer' : 'default',
                 },
               }),
             ),
-            h('div', { style: { fontSize: 10, color: C.sub } }, bucket.label),
+            h('div', { style: { fontSize: 11, color: C.sub } }, bucket.label),
           ),
         ),
       )
@@ -2346,7 +2588,7 @@ window.__ModuleLoader__.load({
           style: {
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            gap: S.md,
             flex: 1,
             minHeight: 0,
             maxHeight: 196,
@@ -2361,17 +2603,17 @@ window.__ModuleLoader__.load({
             {
               key: row.key,
               onClick: onPick ? () => onPick(row) : undefined,
-              style: { display: 'flex', flexDirection: 'column', gap: 5, cursor: onPick ? 'pointer' : 'default' },
+              style: { display: 'flex', flexDirection: 'column', gap: S.sm, cursor: onPick ? 'pointer' : 'default' },
             },
             h(
               'div',
-              { style: { display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 12.5 } },
+              { style: { display: 'flex', alignItems: 'baseline', gap: S.sm, fontSize: 12 } },
               h('span', { style: { flex: 1, lineHeight: 1.4, wordBreak: 'break-word' } }, row.key),
               h('span', { style: { color: C.sub, fontWeight: 600, flex: '0 0 auto' } }, row.value),
             ),
             h(
               'div',
-              { style: { height: 8, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+              { style: { height: 8, borderRadius: R.pill, background: C.track, overflow: 'hidden' } },
               h('div', { style: { width: Math.round((row.value / max) * 100) + '%', height: '100%', background: C.grad } }),
             ),
           ),
@@ -2382,13 +2624,13 @@ window.__ModuleLoader__.load({
     function ChartCard({ title, hint, children, actions }) {
       return h(
         'div',
-        cardStyle({ flex: '1 1 auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0, width: '100%', minHeight: 248 }),
+        cardStyle({ flex: '1 1 auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: S.md, minWidth: 0, width: '100%', minHeight: 248 }),
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+          { style: { display: 'flex', alignItems: 'baseline', gap: S.sm } },
           h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, title),
           actions || null,
-          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, hint) : null,
+          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 11, color: C.sub } }, hint) : null,
         ),
         children,
       )
@@ -2415,8 +2657,26 @@ window.__ModuleLoader__.load({
       const planned = days.filter((item) => item.parentId)
       const spent = round1(days.reduce((sum, item) => sum + (item.spentH || 0), 0))
       const estimate = round1(days.reduce((sum, item) => sum + (item.estimateH || 0), 0))
-      const overtime = days.filter((item) => isOvertime(item.date, holidayMap))
-      const overtimeHours = round1(overtime.reduce((sum, item) => sum + (item.spentH || 0), 0))
+      const overtime = useMemo(() => {
+        const byDate = new Map()
+        for (const item of days) {
+          byDate.set(item.date, round1((byDate.get(item.date) || 0) + (item.spentH || 0)))
+        }
+        let total = 0
+        let dayCount = 0
+        for (const entry of byDate.entries()) {
+          const date = entry[0]
+          const hours = entry[1]
+          const marked = holidayMap.get(date)
+          const restDay = marked === 'on' ? false : marked === 'off' ? true : isWeekend(date)
+          const extra = restDay ? hours : Math.max(0, hours - 8)
+          if (extra > 0) {
+            total += extra
+            dayCount += 1
+          }
+        }
+        return { hours: round1(total), days: dayCount }
+      }, [days, holidayMap])
 
       const completion = days.length ? Math.round((done.length / days.length) * 100) : 0
       const planRate = planned.length ? Math.round((donePlanned.length / planned.length) * 100) : null
@@ -2487,18 +2747,18 @@ window.__ModuleLoader__.load({
       const tile = (label, value, hint, accent) =>
         h(
           'div',
-          cardStyle({ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }),
-          h('div', { style: { fontSize: 11.5, color: C.sub, letterSpacing: '.05em' } }, label),
+          cardStyle({ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: S.xs, minWidth: 0 }),
+          h('div', { style: { fontSize: 12, color: C.sub, letterSpacing: '.05em' } }, label),
           h('div', { style: { fontSize: 27, fontWeight: 700, color: accent || C.text, letterSpacing: '-.02em', lineHeight: 1.15 } }, value),
           hint ? h('div', { style: { fontSize: 11, color: C.sub } }, hint) : null,
         )
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.md } },
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+          { style: { display: 'flex', alignItems: 'center', gap: S.sm, flexWrap: 'wrap' } },
           h(Segmented, {
             value: scope,
             options: [
@@ -2513,11 +2773,16 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 10 } },
+          { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: S.md } },
           tile('完成率', completion + '%', done.length + ' / ' + days.length + ' 条'),
           tile('计划达成', planRate === null ? '—' : planRate + '%', '计划外 ' + (offRate === null ? '—' : offRate + '%'), C.brand),
           tile('实际工时', spent + 'h', '预估 ' + estimate + 'h'),
-          tile('加班工时', overtimeHours + 'h', overtime.length + ' 条非工作日', overtimeHours ? C.warn : C.text),
+          tile(
+            '加班工时',
+            overtime.hours + 'h',
+            overtime.days ? overtime.days + ' 天（含工作日超 8h 部分）' : '无加班',
+            overtime.hours ? C.warn : C.text,
+          ),
         ),
         h(
           'div',
@@ -2530,7 +2795,7 @@ window.__ModuleLoader__.load({
               { title: '任务构成', hint: '点击扇区查看清单' },
               h(
                 'div',
-                { style: { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' } },
+                { style: { display: 'flex', alignItems: 'center', gap: S.lg, flexWrap: 'wrap' } },
                 h(Donut, {
                   segments: [
                     { label: '计划内完成', value: donePlanned.length, color: C.brand },
@@ -2547,7 +2812,7 @@ window.__ModuleLoader__.load({
                 }),
                 h(
                   'div',
-                  { style: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11.5 } },
+                  { style: { display: 'flex', flexDirection: 'column', gap: S.sm, fontSize: 12 } },
                   [
                     { label: '计划内完成', value: donePlanned.length, color: C.brand },
                     { label: '计划外完成', value: doneOffPlan.length, color: C.warn },
@@ -2555,8 +2820,8 @@ window.__ModuleLoader__.load({
                   ].map((row) =>
                     h(
                       'div',
-                      { key: row.label, style: { display: 'flex', alignItems: 'center', gap: 6 } },
-                      h('span', { style: { width: 8, height: 8, borderRadius: 999, background: row.color } }),
+                      { key: row.label, style: { display: 'flex', alignItems: 'center', gap: S.sm } },
+                      h('span', { style: { width: 8, height: 8, borderRadius: R.pill, background: row.color } }),
                       h('span', { style: { color: C.sub } }, row.label),
                       h('span', { style: { marginLeft: 'auto', fontWeight: 600 } }, row.value),
                     ),
@@ -2575,10 +2840,10 @@ window.__ModuleLoader__.load({
                 hint: '悬停看单点',
                 actions: h(
                   'span',
-                  { style: { marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: C.sub } },
-                  h('span', { style: { width: 12, height: 3, borderRadius: 2, background: C.brand } }),
+                  { style: { marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: S.sm, fontSize: 11, color: C.sub } },
+                  h('span', { style: { width: 12, height: 3, borderRadius: R.sm, background: C.brand } }),
                   '完成数',
-                  h('span', { style: { width: 12, height: 3, borderRadius: 2, background: C.warn, marginLeft: 6 } }),
+                  h('span', { style: { width: 12, height: 3, borderRadius: R.sm, background: C.warn, marginLeft: 6 } }),
                   '工时',
                 ),
               },
@@ -2599,10 +2864,10 @@ window.__ModuleLoader__.load({
                 hint: '虚线=理想节奏',
                 actions: h(
                   'span',
-                  { style: { marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: C.sub } },
-                  h('span', { style: { width: 12, height: 3, borderRadius: 2, background: C.brand } }),
+                  { style: { marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: S.sm, fontSize: 11, color: C.sub } },
+                  h('span', { style: { width: 12, height: 3, borderRadius: R.sm, background: C.brand } }),
                   '实际',
-                  h('span', { style: { width: 12, height: 3, borderRadius: 2, background: C.sub, marginLeft: 6, opacity: 0.7 } }),
+                  h('span', { style: { width: 12, height: 3, borderRadius: R.sm, background: C.sub, marginLeft: 6, opacity: 0.7 } }),
                   '理想',
                 ),
               },
@@ -2640,7 +2905,7 @@ window.__ModuleLoader__.load({
                 ),
               },
               drill.items.length === 0
-                ? h('div', { style: { fontSize: 12.5, color: C.sub } }, '没有任务')
+                ? h('div', { style: { fontSize: 12, color: C.sub } }, '没有任务')
                 : drill.items.map((item) =>
                     h(
                       'div',
@@ -2649,8 +2914,8 @@ window.__ModuleLoader__.load({
                         style: {
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 8,
-                          fontSize: 12.5,
+                          gap: S.sm,
+                          fontSize: 12,
                           padding: '4px 0',
                           borderBottom: '1px solid ' + C.line,
                         },
@@ -2664,7 +2929,7 @@ window.__ModuleLoader__.load({
                       ),
                       h(
                         'span',
-                        { style: { color: item.status === 'done' ? C.ok : C.sub, fontSize: 10.5, width: 36 } },
+                        { style: { color: item.status === 'done' ? C.ok : C.sub, fontSize: 11, width: 36 } },
                         item.status === 'done' ? '完成' : '未完成',
                       ),
                     ),
@@ -2735,11 +3000,11 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 20 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.xl } },
         h('div', { style: { fontSize: 12, color: C.sub } }, `统计口径：${weekLabel(weekKey)}（周一至周日）`),
         h(
           'div',
-          { style: { display: 'flex', gap: 12, flexWrap: 'wrap' } },
+          { style: { display: 'flex', gap: S.md, flexWrap: 'wrap' } },
           h(StatCard, {
             label: '计划达成率',
             value: metrics.rate === null ? '—' : metrics.rate + '%',
@@ -2763,7 +3028,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+          { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
           h('div', { style: { fontSize: 12, color: C.sub } }, '近 8 周完成数'),
           h(
             'div',
@@ -2771,7 +3036,7 @@ window.__ModuleLoader__.load({
               style: {
                 display: 'flex',
                 alignItems: 'flex-end',
-                gap: 10,
+                gap: S.md,
                 height: 110,
                 padding: '0 4px',
                 borderBottom: '1px solid ' + C.line,
@@ -2783,7 +3048,7 @@ window.__ModuleLoader__.load({
                 {
                   key: entry.key,
                   title: `${entry.key}：完成 ${entry.done} / 共 ${entry.total}`,
-                  style: { flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
+                  style: { flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: S.xs },
                 },
                 h('div', { style: { fontSize: 11, color: C.sub } }, entry.done || ''),
                 h('div', {
@@ -2791,30 +3056,30 @@ window.__ModuleLoader__.load({
                     width: '70%',
                     height: Math.max(4, Math.round((entry.done / maxDone) * 72)),
                     background: entry.key === weekKey ? C.brand : C.line,
-                    borderRadius: 3,
+                    borderRadius: R.sm,
                   },
                 }),
-                h('div', { style: { fontSize: 10, color: C.sub } }, entry.key.slice(-2)),
+                h('div', { style: { fontSize: 11, color: C.sub } }, entry.key.slice(-2)),
               ),
             ),
           ),
         ),
         h(
           'div',
-          { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+          { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
           h('div', { style: { fontSize: 12, color: C.sub } }, '本周计划条目分布'),
           byProject.length === 0
             ? h('div', { style: { fontSize: 13, color: C.sub } }, '本周还没有完成的任务')
             : byProject.map(([project, count]) =>
                 h(
                   'div',
-                  { key: project, style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 } },
+                  { key: project, style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12 } },
                   h('span', { style: { width: 110 } }, project),
                   h(
                     'div',
-                    { style: { flex: 1, background: C.soft, borderRadius: 3, height: 8 } },
+                    { style: { flex: 1, background: C.soft, borderRadius: R.sm, height: 8 } },
                     h('div', {
-                      style: { width: Math.round((count / maxProject) * 100) + '%', background: C.brand, height: 8, borderRadius: 3 },
+                      style: { width: Math.round((count / maxProject) * 100) + '%', background: C.brand, height: 8, borderRadius: R.sm },
                     }),
                   ),
                   h('span', { style: { width: 24, textAlign: 'right', color: C.sub } }, count),
@@ -2877,14 +3142,14 @@ window.__ModuleLoader__.load({
           width: 620,
           footer: h(
             'div',
-            { style: { display: 'flex', gap: 8, justifyContent: 'flex-end' } },
+            { style: { display: 'flex', gap: S.sm, justifyContent: 'flex-end' } },
             h(Btn, { onClick: preview, disabled: busy || !ready }, '预览（dry-run）'),
             h(Btn, { primary: true, onClick: submit, disabled: busy || !ready || Boolean(done) }, done ? '已提交' : '确认提交'),
           ),
         },
         h(
           'div',
-          { style: { display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5 } },
+          { style: { display: 'flex', flexDirection: 'column', gap: S.md, fontSize: 12 } },
           h(
             'div',
             { style: { color: C.sub } },
@@ -2897,13 +3162,13 @@ window.__ModuleLoader__.load({
             ? h('div', { style: { color: C.danger } }, '还没选接收人：不选接收人，日志提交后对任何人都不可见。')
             : h(
                 'div',
-                { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+                { style: { display: 'flex', gap: S.sm, flexWrap: 'wrap' } },
                 recipients.map((person) =>
                   h(
                     'span',
                     {
                       key: person.userId,
-                      style: { padding: '3px 8px', borderRadius: 999, background: C.soft, fontSize: 12 },
+                      style: { padding: '3px 8px', borderRadius: R.pill, background: C.soft, fontSize: 12 },
                     },
                     person.name,
                   ),
@@ -2919,12 +3184,12 @@ window.__ModuleLoader__.load({
           contents
             ? h(
                 'div',
-                { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+                { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
                 h('div', { style: { color: C.sub } }, '将提交的内容'),
                 contents.map((row) =>
                   h(
                     'div',
-                    { key: row.key, style: { border: '1px solid ' + C.line, borderRadius: 8, padding: '6px 8px' } },
+                    { key: row.key, style: { border: '1px solid ' + C.line, borderRadius: R.sm, padding: '6px 8px' } },
                     h('div', { style: { fontSize: 11, color: C.sub } }, row.key + ' · type=' + row.type),
                     h(
                       'div',
@@ -2942,7 +3207,7 @@ window.__ModuleLoader__.load({
                 {
                   style: {
                     border: '1px solid ' + C.line,
-                    borderRadius: 8,
+                    borderRadius: R.sm,
                     padding: '8px 10px',
                     background: C.soft,
                     whiteSpace: 'pre-wrap',
@@ -3004,7 +3269,7 @@ window.__ModuleLoader__.load({
               cursor: 'pointer',
               fontSize: 12,
               padding: '2px 7px',
-              borderRadius: 6,
+              borderRadius: R.sm,
               fontFamily: 'inherit',
             },
             onMouseEnter: (event) => {
@@ -3019,19 +3284,19 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        cardStyle({ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px' }),
+        cardStyle({ display: 'flex', flexDirection: 'column', gap: S.sm, padding: '12px 14px' }),
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+          { style: { display: 'flex', alignItems: 'baseline', gap: S.sm } },
           h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, label),
-          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, hint) : null,
+          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 11, color: C.sub } }, hint) : null,
         ),
         h(
           'div',
           {
             style: {
               display: 'flex',
-              gap: 2,
+              gap: S.xs,
               alignItems: 'center',
               opacity: focus ? 1 : 0.35,
               transition: 'opacity .15s ease',
@@ -3071,7 +3336,7 @@ window.__ModuleLoader__.load({
           {
             style: {
               display: 'flex',
-              gap: 8,
+              gap: S.sm,
               alignItems: 'center',
               borderTop: '1px solid ' + C.line,
               paddingTop: 8,
@@ -3194,7 +3459,7 @@ window.__ModuleLoader__.load({
             position: 'relative',
             margin: '-4px -10px',
             padding: '4px 10px',
-            borderRadius: 10,
+            borderRadius: R.md,
             background: focus ? C.brandSoft : 'transparent',
             transition: 'background .15s ease',
           },
@@ -3231,15 +3496,15 @@ window.__ModuleLoader__.load({
     function DocSection({ title, hint, children, accent, extra }) {
       return h(
         'section',
-        { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'baseline', gap: 8, borderBottom: '1px solid ' + C.line, paddingBottom: 6 } },
+          { style: { display: 'flex', alignItems: 'baseline', gap: S.sm, borderBottom: '1px solid ' + C.line, paddingBottom: 6 } },
           h(
             'span',
             {
               style: {
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: '.06em',
                 color: accent ? C.brand : C.sub,
@@ -3247,11 +3512,48 @@ window.__ModuleLoader__.load({
             },
             title,
           ),
-          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 10.5, color: C.sub } }, hint) : null,
+          hint ? h('span', { style: { marginLeft: 'auto', fontSize: 11, color: C.sub } }, hint) : null,
           extra || null,
         ),
         children,
       )
+    }
+
+    function Marked({ text, query }) {
+      const needle = String(query || '').trim()
+      const source = String(text === null || text === undefined ? '' : text)
+      if (!needle) return source
+      const lower = source.toLowerCase()
+      const target = needle.toLowerCase()
+      const nodes = []
+      let cursor = 0
+      let key = 0
+      while (cursor <= source.length) {
+        const at = lower.indexOf(target, cursor)
+        if (at < 0) {
+          nodes.push(source.slice(cursor))
+          break
+        }
+        if (at > cursor) nodes.push(source.slice(cursor, at))
+        nodes.push(
+          h(
+            'mark',
+            {
+              key: 'm' + key,
+              style: {
+                background: 'color-mix(in srgb, ' + C.warn + ' 38%, transparent)',
+                color: 'inherit',
+                borderRadius: R.sm,
+                padding: '0 1px',
+              },
+            },
+            source.slice(at, at + target.length),
+          ),
+        )
+        key += 1
+        cursor = at + target.length
+      }
+      return nodes
     }
 
     function ReportDoc({ state, notify }) {
@@ -3262,6 +3564,7 @@ window.__ModuleLoader__.load({
       const [submitOpen, setSubmitOpen] = useState(false)
       const [leftText, setLeftText] = useState('')
       const [goalsText, setGoalsText] = useState('')
+      const [search, setSearch] = useState('')
       const [aiBusy, setAiBusy] = useState(false)
       const [aiPreview, setAiPreview] = useState(null)
       const lastLeft = React.useRef('')
@@ -3416,12 +3719,36 @@ window.__ModuleLoader__.load({
         return Array.from(groups.entries())
       }, [periodItems.done, state.items])
 
+      const needle = search.trim()
+      const matchCount = useMemo(() => {
+        if (!needle) return 0
+        const target = needle.toLowerCase()
+        const hay = [
+          goalsText,
+          leftText,
+          periodLabel,
+          ...doneGroups.map((group) => group[0]),
+          ...periodItems.done.map((item) => item.title),
+        ]
+          .join('\n')
+          .toLowerCase()
+        let total = 0
+        let index = 0
+        while (index <= hay.length) {
+          const at = hay.indexOf(target, index)
+          if (at < 0) break
+          total += 1
+          index = at + target.length
+        }
+        return total
+      }, [needle, goalsText, leftText, periodLabel, doneGroups, periodItems.done])
+
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.md } },
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+          { style: { display: 'flex', alignItems: 'center', gap: S.sm, flexWrap: 'nowrap', overflow: 'hidden' } },
           h(Segmented, {
             value: kind,
             options: [
@@ -3431,31 +3758,46 @@ window.__ModuleLoader__.load({
             ],
             onChange: changeKind,
           }),
-          h(Btn, { small: true, onClick: () => shift(-1) }, '‹'),
-          kind === 'daily'
-            ? h(TextInput, {
-                type: 'date',
-                value: key,
-                onChange: setKey,
-                width: 150,
-              })
-            : h('div', { style: { fontSize: 12.5, fontWeight: 600, minWidth: 170 } }, periodLabel),
-          h(Btn, { small: true, disabled: atLatest, onClick: () => shift(1) }, '›'),
-          h('div', { style: { flex: 1 } }),
+          h(
+            'div',
+            { style: { display: 'flex', alignItems: 'center', gap: S.xs, flex: '0 0 auto' } },
+            h(Btn, { small: true, onClick: () => shift(-1) }, '‹'),
+            kind === 'daily'
+              ? h('div', { style: { width: 118, flex: '0 0 auto' } }, h(TextInput, {
+                  type: 'date',
+                  value: key,
+                  onChange: setKey,
+                }))
+              : h('div', { style: { fontSize: 12, fontWeight: 600, minWidth: 96, textAlign: 'center' } }, periodLabel),
+            h(Btn, { small: true, disabled: atLatest, onClick: () => shift(1) }, '›'),
+          ),
+          h('div', { style: { flex: 1, minWidth: 8 } }),
+          h('div', { style: { width: 150, flex: '0 1 150px' } }, h(TextInput, {
+            value: search,
+            onChange: setSearch,
+            placeholder: '在报告中查找…',
+          })),
+          search.trim()
+            ? h(
+                'span',
+                { style: { fontSize: 11, color: matchCount ? C.brand : C.sub, minWidth: 34 } },
+                matchCount + ' 处',
+              )
+            : null,
           h(Btn, { small: true, onClick: resetDefaults, disabled: busy }, '恢复默认'),
           h(Btn, { small: true, onClick: load, disabled: busy }, busy ? '刷新中…' : '刷新'),
           h(Btn, { small: true, onClick: copy }, '复制'),
-          h(Btn, { small: true, onClick: exportFile }, '导出 MD'),
-          h(Btn, { small: true, onClick: exportWord }, '导出 Word'),
+          h(Btn, { small: true, onClick: exportFile, title: '导出 Markdown' }, 'MD'),
+          h(Btn, { small: true, onClick: exportWord, title: '导出 Word' }, 'Word'),
           kind === 'daily' && report ? h(Btn, { primary: true, onClick: () => setSubmitOpen(true) }, '提交钉钉') : null,
         ),
 
         h(
           'div',
-          cardStyle({ padding: '22px 26px 26px', display: 'flex', flexDirection: 'column', gap: 18 }),
+          cardStyle({ padding: '22px 26px 26px', display: 'flex', flexDirection: 'column', gap: S.xl }),
           h(
             'div',
-            { style: { display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' } },
+            { style: { display: 'flex', alignItems: 'flex-end', gap: S.md, flexWrap: 'wrap' } },
             h(
               'div',
               { style: { fontSize: 20, fontWeight: 700, letterSpacing: '-.02em' } },
@@ -3471,12 +3813,27 @@ window.__ModuleLoader__.load({
                   color: C.brand,
                   background: C.brandSoft,
                   padding: '3px 10px',
-                  borderRadius: 999,
+                  borderRadius: R.pill,
                 },
               },
               '完成 ' + periodItems.done.length + ' / ' + periodItems.all.length + ' · ' + periodItems.hours + 'h',
             ),
           ),
+          needle
+            ? h(
+                'div',
+                {
+                  style: {
+                    fontSize: 11,
+                    color: C.sub,
+                    background: C.brandSoft,
+                    borderRadius: R.sm,
+                    padding: '6px 10px',
+                  },
+                },
+                '搜索「' + needle + '」：共 ' + matchCount + ' 处，已高亮。可编辑段落暂为只读，清空搜索框即可继续编辑。',
+              )
+            : null,
 
           kind !== 'daily'
             ? h(
@@ -3491,12 +3848,26 @@ window.__ModuleLoader__.load({
                     aiBusy ? '生成中…' : 'AI 生成',
                   ),
                 },
-                h(InlineArea, {
-                  value: goalsText,
-                  onChange: setGoalsText,
-                  onCommit: () => saveField('goals', goalsText, lastGoals.current, '目标推进'),
-                  placeholder: '写这一周/这个月的目标推进情况、关键结论、下阶段重点…',
-                }),
+                needle
+                  ? h(
+                      'div',
+                      {
+                        style: {
+                          fontSize: 13,
+                          lineHeight: 1.95,
+                          whiteSpace: 'pre-wrap',
+                          minHeight: 60,
+                          padding: '4px 0',
+                        },
+                      },
+                      h(Marked, { text: goalsText, query: needle }),
+                    )
+                  : h(InlineArea, {
+                      value: goalsText,
+                      onChange: setGoalsText,
+                      onCommit: () => saveField('goals', goalsText, lastGoals.current, '目标推进'),
+                      placeholder: '写这一周/这个月的目标推进情况、关键结论、下阶段重点…',
+                    }),
               )
             : null,
 
@@ -3504,24 +3875,24 @@ window.__ModuleLoader__.load({
             DocSection,
             { title: kind === 'daily' ? '一、今日完成工作' : '二、本期完成', hint: '自动汇总，不可编辑' },
             doneGroups.length === 0
-              ? h('div', { style: { fontSize: 12.5, color: C.sub } }, '这段时间还没有已完成的任务')
+              ? h('div', { style: { fontSize: 12, color: C.sub } }, '这段时间还没有已完成的任务')
               : h(
                   'div',
-                  { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+                  { style: { display: 'flex', flexDirection: 'column', gap: S.md } },
                   doneGroups.map(([label, list]) =>
                     h(
                       'div',
                       { key: label },
-                      h('div', { style: { fontSize: 11, color: C.sub, marginBottom: 4 } }, label),
+                      h('div', { style: { fontSize: 11, color: C.sub, marginBottom: 4 } }, h(Marked, { text: label, query: needle })),
                       list.map((item) =>
                         h(
                           'div',
                           {
                             key: item.id,
-                            style: { display: 'flex', alignItems: 'baseline', gap: 8, padding: '3px 0', fontSize: 13 },
+                            style: { display: 'flex', alignItems: 'baseline', gap: S.sm, padding: '3px 0', fontSize: 13 },
                           },
                           h('span', { style: { color: C.ok, fontSize: 11 } }, '✓'),
-                          h('span', { style: { flex: 1 } }, item.title),
+                          h('span', { style: { flex: 1 } }, h(Marked, { text: item.title, query: needle })),
                           item.spentH || item.estimateH
                             ? h(
                                 'span',
@@ -3530,7 +3901,7 @@ window.__ModuleLoader__.load({
                               )
                             : null,
                           isWeekend(item.date)
-                            ? h('span', { style: { fontSize: 10, color: C.warn } }, '加班')
+                            ? h('span', { style: { fontSize: 11, color: C.warn } }, '加班')
                             : null,
                         ),
                       ),
@@ -3545,7 +3916,7 @@ window.__ModuleLoader__.load({
               title: kind === 'daily' ? '二、所用工时' : '三、所用工时',
               hint: '自动统计，不可编辑',
             },
-            h('div', { style: { fontSize: 26, fontWeight: 700, letterSpacing: '-.02em' } }, periodItems.hours + ' h'),
+            h('div', { style: { fontSize: 27, fontWeight: 700, letterSpacing: '-.02em' } }, periodItems.hours + ' h'),
           ),
 
           h(
@@ -3560,12 +3931,19 @@ window.__ModuleLoader__.load({
                 aiBusy ? '生成中…' : 'AI 生成',
               ),
             },
-            h(InlineArea, {
-              value: leftText,
-              onChange: setLeftText,
-              onCommit: () => saveField('left', leftText, lastLeft.current, '未完成段'),
-              placeholder: kind === 'daily' ? '　· 未完成的 xxx\n　· 明日：xxx' : '　· 未完成的 xxx\n　· 下一步：xxx',
-            }),
+            needle
+              ? h(
+                  'div',
+                  { style: { fontSize: 13, lineHeight: 1.95, whiteSpace: 'pre-wrap', minHeight: 60, padding: '4px 0' } },
+                  h(Marked, { text: leftText, query: needle }),
+                )
+              : h(InlineArea, {
+                  value: leftText,
+                  onChange: setLeftText,
+                  onCommit: () => saveField('left', leftText, lastLeft.current, '未完成段'),
+                  placeholder:
+                    kind === 'daily' ? '　· 未完成的 xxx\n　· 明日：xxx' : '　· 未完成的 xxx\n　· 下一步：xxx',
+                }),
           ),
 
           h(
@@ -3573,11 +3951,11 @@ window.__ModuleLoader__.load({
             {
               style: {
                 display: 'flex',
-                gap: 16,
+                gap: S.lg,
                 flexWrap: 'wrap',
                 borderTop: '1px solid ' + C.line,
                 paddingTop: 10,
-                fontSize: 11.5,
+                fontSize: 12,
                 color: C.sub,
               },
             },
@@ -3605,7 +3983,7 @@ window.__ModuleLoader__.load({
                 onClose: () => setAiPreview(null),
                 footer: h(
                   'div',
-                  { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
+                  { style: { display: 'flex', justifyContent: 'flex-end', gap: S.sm } },
                   h(Btn, { onClick: () => setAiPreview(null) }, '取消'),
                   h(Btn, { primary: true, onClick: applyAi }, '替换这段'),
                 ),
@@ -3620,7 +3998,7 @@ window.__ModuleLoader__.load({
                 {
                   style: {
                     border: '1px solid ' + C.line,
-                    borderRadius: 10,
+                    borderRadius: R.md,
                     padding: '10px 12px',
                     fontSize: 13,
                     lineHeight: 1.85,
@@ -3704,10 +4082,10 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.lg } },
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+          { style: { display: 'flex', alignItems: 'center', gap: S.sm, flexWrap: 'wrap' } },
           h(Segmented, {
             value: kind,
             options: [
@@ -3735,7 +4113,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' } },
+          { style: { display: 'flex', gap: S.lg, alignItems: 'flex-start', flexWrap: 'wrap' } },
           h(
             'div',
             cardStyle({
@@ -3744,13 +4122,13 @@ window.__ModuleLoader__.load({
               padding: '10px 10px',
               display: 'flex',
               flexDirection: 'column',
-              gap: 2,
+              gap: S.xs,
               maxHeight: 520,
               overflow: 'auto',
             }),
             h('div', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em', padding: '0 4px 6px' } }, '目录'),
             (state.reportIndex || []).length === 0
-              ? h('div', { style: { fontSize: 11.5, color: C.sub, padding: '0 4px' } }, '还没有生成过报告')
+              ? h('div', { style: { fontSize: 12, color: C.sub, padding: '0 4px' } }, '还没有生成过报告')
               : (state.reportIndex || []).map((entry) =>
                   h(
                     'div',
@@ -3763,17 +4141,17 @@ window.__ModuleLoader__.load({
                       style: {
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
+                        gap: S.sm,
                         fontSize: 12,
                         padding: '5px 6px',
-                        borderRadius: 8,
+                        borderRadius: R.sm,
                         cursor: 'pointer',
                         background: entry.kind === kind && entry.periodKey === key ? C.brandSoft : 'transparent',
                       },
                     },
                     h(
                       'span',
-                      { style: { width: 30, color: C.sub, fontSize: 10.5 } },
+                      { style: { width: 30, color: C.sub, fontSize: 11 } },
                       entry.kind === 'daily' ? '日' : entry.kind === 'weekly' ? '周' : '月',
                     ),
                     h('span', { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.periodKey),
@@ -3783,7 +4161,7 @@ window.__ModuleLoader__.load({
                         style: {
                           width: 6,
                           height: 6,
-                          borderRadius: 999,
+                          borderRadius: R.pill,
                           background: entry.status === 'submitted' ? C.ok : C.track,
                         },
                         title: entry.status === 'submitted' ? '已提交' : '草稿',
@@ -3801,11 +4179,11 @@ window.__ModuleLoader__.load({
               minHeight: 240,
               display: 'flex',
               flexDirection: 'column',
-              gap: 8,
+              gap: S.sm,
             }),
             h(
               'div',
-              { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+              { style: { display: 'flex', alignItems: 'center', gap: S.sm } },
               h('span', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, '报告预览'),
               h(
                 'span',
@@ -3818,7 +4196,7 @@ window.__ModuleLoader__.load({
                 margin: 0,
                 whiteSpace: 'pre-wrap',
                 fontFamily: 'inherit',
-                fontSize: 12.5,
+                fontSize: 12,
                 lineHeight: 1.85,
                 color: C.text,
               },
@@ -3836,7 +4214,7 @@ window.__ModuleLoader__.load({
                   padding: '12px 14px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 8,
+                  gap: S.sm,
                 }),
                 h('div', { style: { fontSize: 11, color: C.sub, letterSpacing: '.05em' } }, '提交钉钉的字段'),
                 report.fields
@@ -3846,9 +4224,9 @@ window.__ModuleLoader__.load({
                       'div',
                       {
                         key: field.name,
-                        style: { borderRadius: 10, padding: '8px 10px', background: C.soft },
+                        style: { borderRadius: R.md, padding: '8px 10px', background: C.soft },
                       },
-                      h('div', { style: { fontSize: 10.5, color: C.sub } }, field.name),
+                      h('div', { style: { fontSize: 11, color: C.sub } }, field.name),
                       h(
                       'div',
                       {
@@ -3866,7 +4244,7 @@ window.__ModuleLoader__.load({
                 ),
                 h(
                   'div',
-                  { style: { fontSize: 10.5, color: C.sub, lineHeight: 1.5 } },
+                  { style: { fontSize: 11, color: C.sub, lineHeight: 1.5 } },
                   '「未完成工作和明天计划」在上方框内编辑，这里不再重复；接收人在「插件 → 工作台 → 配置」里设置。',
                 ),
               )
@@ -3950,7 +4328,7 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 640, color: C.text, fontSize: 13 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.lg, maxWidth: 640, color: C.text, fontSize: 13 } },
         h(
           'div',
           { style: { fontSize: 13, fontWeight: 600 } },
@@ -3978,7 +4356,7 @@ window.__ModuleLoader__.load({
         })),
         h(
           'div',
-          { style: { display: 'flex', gap: 8 } },
+          { style: { display: 'flex', gap: S.sm } },
           h(Btn, { onClick: test, disabled: testing }, testing ? '测试中…' : '测试连接'),
           h(Btn, { primary: true, onClick: save }, '保存'),
           saved ? h('span', { style: { fontSize: 12, color: C.sub, alignSelf: 'center' } }, saved) : null,
@@ -3989,7 +4367,7 @@ window.__ModuleLoader__.load({
         result
           ? h(
               'div',
-              { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+              { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
               h(
                 'div',
                 { style: { fontSize: 12 } },
@@ -4015,7 +4393,7 @@ window.__ModuleLoader__.load({
                         fontSize: 12,
                         color: C.danger,
                         background: C.soft,
-                        borderRadius: 6,
+                        borderRadius: R.sm,
                         padding: '8px 10px',
                       },
                     },
@@ -4025,7 +4403,7 @@ window.__ModuleLoader__.load({
               h('div', { style: { fontSize: 12, color: C.sub } }, '可见项目 ' + result.projects.length + ' 个，勾选要用的：'),
               h(
                 'div',
-                { style: { maxHeight: 200, overflow: 'auto', border: '1px solid ' + C.line, borderRadius: 8, padding: 8 } },
+                { style: { maxHeight: 200, overflow: 'auto', border: '1px solid ' + C.line, borderRadius: R.sm, padding: 8 } },
                 projects.length === 0
                   ? h('div', { style: { fontSize: 12, color: C.sub } }, '没有可见项目')
                   : projects.map((project) =>
@@ -4033,7 +4411,7 @@ window.__ModuleLoader__.load({
                         'label',
                         {
                           key: project.id,
-                          style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '3px 0' },
+                          style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12, padding: '3px 0' },
                         },
                         h('input', {
                           type: 'checkbox',
@@ -4301,7 +4679,7 @@ window.__ModuleLoader__.load({
 
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 720, color: C.text, fontSize: 13 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.lg, maxWidth: 720, color: C.text, fontSize: 13 } },
         h('div', { style: { fontSize: 13, fontWeight: 600 } }, '钉钉日志'),
         h(
           'div',
@@ -4309,10 +4687,10 @@ window.__ModuleLoader__.load({
             style: {
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
+              gap: S.md,
               flexWrap: 'wrap',
               padding: '9px 12px',
-              borderRadius: 10,
+              borderRadius: R.md,
               background: status && status.authenticated && status.tokenValid ? C.brandSoft : C.soft,
               fontSize: 12,
             },
@@ -4323,7 +4701,7 @@ window.__ModuleLoader__.load({
               style: {
                 width: 7,
                 height: 7,
-                borderRadius: 999,
+                borderRadius: R.pill,
                 background: status && status.authenticated && status.tokenValid ? C.ok : C.sub,
               },
             },
@@ -4365,11 +4743,11 @@ window.__ModuleLoader__.load({
               {
                 style: {
                   border: '1px solid ' + C.line,
-                  borderRadius: 12,
+                  borderRadius: R.md,
                   padding: '12px 14px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 8,
+                  gap: S.sm,
                   background: C.panel,
                 },
               },
@@ -4378,7 +4756,7 @@ window.__ModuleLoader__.load({
                 'div',
                 {
                   style: {
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: 700,
                     letterSpacing: '.12em',
                     fontFamily: 'ui-monospace, Consolas, monospace',
@@ -4396,7 +4774,7 @@ window.__ModuleLoader__.load({
                 : null,
               h(
                 'div',
-                { style: { display: 'flex', gap: 8 } },
+                { style: { display: 'flex', gap: S.sm } },
                 login.url
                   ? h(
                       Btn,
@@ -4459,11 +4837,11 @@ window.__ModuleLoader__.load({
               {
                 style: {
                   border: '1px solid ' + C.line,
-                  borderRadius: 12,
+                  borderRadius: R.md,
                   padding: '12px 14px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 8,
+                  gap: S.sm,
                   background: C.soft,
                   fontSize: 12,
                 },
@@ -4477,10 +4855,10 @@ window.__ModuleLoader__.load({
               install && (install.phase === 'downloading' || install.phase === 'extracting' || install.phase === 'configuring')
                 ? h(
                     'div',
-                    { style: { display: 'flex', flexDirection: 'column', gap: 5 } },
+                    { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
                     h(
                       'div',
-                      { style: { height: 6, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+                      { style: { height: 6, borderRadius: R.pill, background: C.track, overflow: 'hidden' } },
                       h('div', {
                         style: {
                           width: Math.max(4, install.percent || 0) + '%',
@@ -4494,11 +4872,11 @@ window.__ModuleLoader__.load({
                   )
                 : null,
               install && install.phase === 'failed'
-                ? h('div', { style: { fontSize: 11.5, color: C.danger } }, '安装失败：' + install.detail)
+                ? h('div', { style: { fontSize: 12, color: C.danger } }, '安装失败：' + install.detail)
                 : null,
               h(
                 'div',
-                { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+                { style: { display: 'flex', gap: S.sm, alignItems: 'center' } },
                 h(
                   Btn,
                   { small: true, primary: true, onClick: startInstall, disabled: installing },
@@ -4515,7 +4893,7 @@ window.__ModuleLoader__.load({
         templateId && !picking
           ? h(
               'div',
-              { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, flexWrap: 'wrap' } },
+              { style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12, flexWrap: 'wrap' } },
               h('span', { style: { color: C.sub } }, '日志模板'),
               h(
                 'span',
@@ -4556,7 +4934,7 @@ window.__ModuleLoader__.load({
         fields.length > 0
           ? h(
               'div',
-              { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+              { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
               h('div', { style: { fontSize: 12, color: C.sub } }, '字段映射（报告段落 → 钉钉字段）'),
               [
                 { key: 'done', label: '今日完成' },
@@ -4566,7 +4944,7 @@ window.__ModuleLoader__.load({
               ].map((row) =>
                 h(
                   'div',
-                  { key: row.key, style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 } },
+                  { key: row.key, style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12 } },
                   h('span', { style: { width: 120, color: C.sub } }, row.label),
                   h(
                     'select',
@@ -4584,11 +4962,11 @@ window.__ModuleLoader__.load({
           : null,
         h(
           'div',
-          { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+          { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
           h('div', { style: { fontSize: 12, color: C.sub } }, '日志接收人（提交时发送到这些人）'),
           h(
             'div',
-            { style: { display: 'flex', gap: 8 } },
+            { style: { display: 'flex', gap: S.sm } },
             h('input', {
               value: query,
               onChange: (event) => setQuery(event.target.value),
@@ -4603,7 +4981,7 @@ window.__ModuleLoader__.load({
           candidates.length > 0
             ? h(
                 'div',
-                { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+                { style: { display: 'flex', gap: S.sm, flexWrap: 'wrap' } },
                 candidates.map((person) =>
                   h(
                     Btn,
@@ -4625,7 +5003,7 @@ window.__ModuleLoader__.load({
             : null,
           h(
             'div',
-            { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+            { style: { display: 'flex', gap: S.sm, flexWrap: 'wrap' } },
             recipients.length === 0
               ? h('span', { style: { fontSize: 12, color: C.danger } }, '还没选接收人 —— 不选的话日志提交后对任何人都不可见')
               : recipients.map((person) =>
@@ -4636,9 +5014,9 @@ window.__ModuleLoader__.load({
                       style: {
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: 6,
+                        gap: S.sm,
                         padding: '3px 8px',
-                        borderRadius: 999,
+                        borderRadius: R.pill,
                         background: C.soft,
                         fontSize: 12,
                       },
@@ -4659,7 +5037,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', gap: 8 } },
+          { style: { display: 'flex', gap: S.sm } },
           h(Btn, { primary: true, onClick: save, disabled: busy }, busy ? '保存中…' : '保存'),
           saved ? h('span', { style: { fontSize: 12, color: C.sub, alignSelf: 'center' } }, saved) : null,
         ),
@@ -4670,14 +5048,118 @@ window.__ModuleLoader__.load({
     function BundleConfig() {
       return h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 30, padding: '4px 2px' } },
+        { style: { display: 'flex', flexDirection: 'column', gap: S.xxl, padding: '4px 2px' } },
         h(GitLabConfig),
         h(DingTalkConfig),
         h(Toasts),
       )
     }
 
+    function FolderPicker({ initial, onCancel, onPick }) {
+      const [pathValue, setPathValue] = useState(initial || '')
+      const [listing, setListing] = useState(null)
+      const [busy, setBusy] = useState(false)
+
+      const open = useCallback(async (target) => {
+        setBusy(true)
+        try {
+          const payload = await call('/fs/dirs', { path: target || '' })
+          setListing(payload)
+          setPathValue(payload.path || '')
+        } catch (cause) {
+          toast('读取目录失败：' + String(cause.message || cause), 'error')
+        } finally {
+          setBusy(false)
+        }
+      }, [])
+
+      useEffect(() => {
+        open(initial || '')
+      }, [initial, open])
+
+      const dirs = (listing && listing.dirs) || []
+      const drives = (listing && listing.drives) || []
+
+      return h(
+        Modal,
+        {
+          title: '选择导出目录',
+          width: 560,
+          onClose: onCancel,
+          footer: h(
+            'div',
+            { style: { display: 'flex', justifyContent: 'space-between', gap: S.sm, alignItems: 'center' } },
+            h('div', { style: { fontSize: 11, color: C.sub, flex: 1, wordBreak: 'break-all' } }, pathValue || '选择磁盘'),
+            h(Btn, { onClick: onCancel }, '取消'),
+            h(Btn, { primary: true, onClick: () => pathValue && onPick(pathValue), disabled: !pathValue }, '选择此目录'),
+          ),
+        },
+        h(
+          'div',
+          { style: { display: 'flex', gap: S.sm, alignItems: 'center', marginBottom: 8 } },
+          listing && listing.parent
+            ? h(Btn, { small: true, onClick: () => open(listing.parent) }, '↑ 上一级')
+            : null,
+          h('div', { style: { flex: 1, fontSize: 11.5, color: C.sub, wordBreak: 'break-all' } }, pathValue || '我的电脑'),
+        ),
+        h(
+          'div',
+          {
+            style: {
+              border: '1px solid ' + C.line,
+              borderRadius: R.md,
+              maxHeight: 300,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+            },
+          },
+          busy
+            ? h('div', { style: { padding: 16, fontSize: 12, color: C.sub } }, '读取中…')
+            : null,
+          drives.map((drive) =>
+            h(
+              'div',
+              {
+                key: drive,
+                onClick: () => open(drive),
+                style: { padding: '8px 12px', cursor: 'pointer', fontSize: 12.5, borderBottom: '1px solid ' + C.line },
+                onMouseEnter: (event) => {
+                  event.currentTarget.style.background = C.brandSoft
+                },
+                onMouseLeave: (event) => {
+                  event.currentTarget.style.background = 'transparent'
+                },
+              },
+              '💽 ' + drive,
+            ),
+          ),
+          !busy && dirs.length === 0 && drives.length === 0
+            ? h('div', { style: { padding: 16, fontSize: 12, color: C.sub } }, '这个目录下没有子文件夹')
+            : null,
+          dirs.map((name) =>
+            h(
+              'div',
+              {
+                key: name,
+                onClick: () => open(pathValue.replace(/[\\/]+$/, '') + '/' + name),
+                style: { padding: '8px 12px', cursor: 'pointer', fontSize: 12.5, borderBottom: '1px solid ' + C.line },
+                onMouseEnter: (event) => {
+                  event.currentTarget.style.background = C.brandSoft
+                },
+                onMouseLeave: (event) => {
+                  event.currentTarget.style.background = 'transparent'
+                },
+              },
+              '📁 ' + name,
+            ),
+          ),
+        ),
+      )
+    }
+
     function SettingsPanel({ state, mutate, onClose, notify }) {
+      const [picking, setPicking] = useState(false)
       const [root, setRoot] = useState((state.settings && state.settings.exportRoot) || '')
       const initialSchedule = (state.settings && state.settings.schedule) || {}
       const [scheduleEnabled, setScheduleEnabled] = useState(initialSchedule.enabled !== false)
@@ -4709,7 +5191,7 @@ window.__ModuleLoader__.load({
           onClose,
           footer: h(
             'div',
-            { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
+            { style: { display: 'flex', justifyContent: 'flex-end', gap: S.sm } },
             h(Btn, { onClick: onClose }, '取消'),
             h(
               Btn,
@@ -4742,27 +5224,72 @@ window.__ModuleLoader__.load({
           {
             style: {
               padding: '9px 11px',
-              borderRadius: 10,
+              borderRadius: R.md,
               background: C.brandSoft,
-              fontSize: 11.5,
+              fontSize: 12,
               lineHeight: 1.6,
               color: C.sub,
             },
           },
           'GitLab 与钉钉的对接在「插件 → 工作台 → 配置」页面里，不在这里。这里只管导出目录、定时和节假日。',
         ),
-        h(Field, { label: '导出根目录（留空则用 profile 下的 worklog/exports）' }, h('input', {
-          value: root,
-          onChange: (event) => setRoot(event.target.value),
-          placeholder: 'D:\\work\\worklog',
-          style: inputStyle(),
-        })),
+        h(
+          Field,
+          { label: '导出根目录（留空则用 profile 下的 worklog/exports）' },
+          h(
+            'div',
+            { style: { display: 'flex', gap: S.sm, alignItems: 'center' } },
+            h('div', { style: { flex: 1, minWidth: 0 } }, h('input', {
+              value: root,
+              onChange: (event) => setRoot(event.target.value),
+              placeholder: '点击右侧选择，或直接粘贴路径',
+              style: inputStyle(),
+            })),
+            h(Btn, { small: true, onClick: () => setPicking(true) }, '选择目录'),
+          ),
+        ),
+        h(
+          Field,
+          { label: '自动备份' },
+          h(
+            'div',
+            { style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12 } },
+            h(
+              'span',
+              { style: { flex: 1, color: C.sub, lineHeight: 1.6 } },
+              '每天首次保存时自动备份一份，保留最近 14 份。',
+            ),
+            h(
+              Btn,
+              {
+                small: true,
+                onClick: () =>
+                  call('/backup/now', {}).then(
+                    (payload) => notify('已备份：' + payload.path),
+                    (cause) => notify('备份失败：' + String(cause.message || cause), 'error'),
+                  ),
+              },
+              '立即备份',
+            ),
+          ),
+        ),
+        picking
+          ? h(FolderPicker, {
+              initial: root || 'D:\\',
+              onCancel: () => setPicking(false),
+              onPick: (picked) => {
+                setRoot(picked)
+                setPicking(false)
+                notify('已选择目录：' + picked)
+              },
+            })
+          : null,
         h(
           'div',
-          { style: { borderTop: '1px solid ' + C.line, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 10 } },
+          { style: { borderTop: '1px solid ' + C.line, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: S.md } },
           h(
             'label',
-            { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 } },
+            { style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12 } },
             h('input', {
               type: 'checkbox',
               checked: scheduleEnabled,
@@ -4772,7 +5299,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
+            { style: { display: 'flex', gap: S.md, flexWrap: 'wrap' } },
             h(Field, { label: '周一至周四 生成日报', grow: true }, h('input', {
               type: 'time',
               value: weekdayTime,
@@ -4788,7 +5315,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'label',
-            { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 } },
+            { style: { display: 'flex', alignItems: 'center', gap: S.sm, fontSize: 12 } },
             h('input', {
               type: 'checkbox',
               checked: weeklyOnFriday,
@@ -4813,7 +5340,7 @@ window.__ModuleLoader__.load({
             }),
             h(
               'div',
-              { style: { fontSize: 10.5, color: C.sub } },
+              { style: { fontSize: 11, color: C.sub } },
               '用于判断加班：周末与非工作日算加班，标记 on 的周末不算。',
             ),
           ),
@@ -4862,11 +5389,11 @@ window.__ModuleLoader__.load({
           probe
             ? h(
                 'div',
-                { style: { display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4 } },
+                { style: { display: 'flex', flexDirection: 'column', gap: S.sm, paddingTop: 4 } },
                 (probe.steps || []).map((step) =>
                   h(
                     'div',
-                    { key: step.name, style: { display: 'flex', gap: 8, fontSize: 12, alignItems: 'baseline' } },
+                    { key: step.name, style: { display: 'flex', gap: S.sm, fontSize: 12, alignItems: 'baseline' } },
                     h('span', { style: { color: step.ok ? C.ok : C.danger } }, step.ok ? '✓' : '✕'),
                     h('span', { style: { width: 120, color: C.sub } }, step.name),
                     h('span', { style: { flex: 1, whiteSpace: 'pre-wrap' } }, step.detail),
@@ -4894,7 +5421,7 @@ window.__ModuleLoader__.load({
             transform: 'translateX(-50%)',
             display: 'flex',
             flexDirection: 'column',
-            gap: 8,
+            gap: S.sm,
             alignItems: 'center',
             pointerEvents: 'none',
           },
@@ -4908,13 +5435,13 @@ window.__ModuleLoader__.load({
               style: {
                 display: 'flex',
                 alignItems: 'center',
-                gap: 9,
+                gap: S.md,
                 padding: '10px 15px',
-                borderRadius: 12,
+                borderRadius: R.md,
                 background: C.panel,
                 boxShadow: '0 12px 36px rgba(0,0,0,.22), 0 2px 6px rgba(0,0,0,.08)',
                 borderLeft: '3px solid ' + (toast.type === 'error' ? C.danger : C.ok),
-                fontSize: 12.5,
+                fontSize: 12,
                 color: C.text,
                 maxWidth: 'min(560px, 80vw)',
                 animation: 'wbToastIn .16s ease-out',
@@ -5045,15 +5572,15 @@ window.__ModuleLoader__.load({
                 margin: '0 auto',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
+                gap: S.md,
                 flexWrap: 'wrap',
                 padding: '8px 12px',
-                borderRadius: 14,
+                borderRadius: R.lg,
                 background: 'linear-gradient(120deg, ' + C.brandSoft + ', transparent 62%)',
               },
             },
-            h('div', { style: { fontSize: 16, fontWeight: 700, letterSpacing: '-.01em' } }, '工作台'),
-            h('div', { style: { color: C.sub, fontSize: 11.5 } }, state.today),
+            h('div', { style: { fontSize: 13, fontWeight: 700, letterSpacing: '-.01em' } }, '工作台'),
+            h('div', { style: { color: C.sub, fontSize: 12 } }, state.today),
             h(Segmented, {
               value: tab,
               options: [
@@ -5067,7 +5594,7 @@ window.__ModuleLoader__.load({
             h('div', { style: { flex: 1 } }),
             h(
               'div',
-              { style: { display: 'flex', gap: 6, alignItems: 'center' } },
+              { style: { display: 'flex', gap: S.sm, alignItems: 'center' } },
               Object.keys(THEMES).map((key) =>
                 h('button', {
                   key,
@@ -5084,7 +5611,7 @@ window.__ModuleLoader__.load({
                     width: 15,
                     height: 15,
                     padding: 0,
-                    borderRadius: 999,
+                    borderRadius: R.pill,
                     cursor: 'pointer',
                     border: themeName === key ? '2px solid ' + C.text : '2px solid transparent',
                     background: 'linear-gradient(135deg, ' + THEMES[key].accent + ', ' + THEMES[key].accent2 + ')',
@@ -5101,7 +5628,7 @@ window.__ModuleLoader__.load({
           { style: { flex: '1 1 auto', overflow: 'auto', padding: '12px 20px 28px' } },
           h(
             'div',
-            { style: { maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 } },
+            { style: { maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: S.md } },
             error ? h('div', { style: { color: C.danger, fontSize: 12 } }, '读取失败：' + error) : null,
           state.drafts && state.drafts.length > 0
             ? h(
@@ -5110,9 +5637,9 @@ window.__ModuleLoader__.load({
                   style: {
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 10,
+                    gap: S.md,
                     padding: '8px 12px',
-                    borderRadius: 8,
+                    borderRadius: R.sm,
                     background: C.soft,
                     fontSize: 12,
                   },
