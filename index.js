@@ -432,6 +432,15 @@ export function apply(ctx) {
     return lines.join('\n')
   }
 
+  function bulletHoursFlat(items) {
+    return items
+      .map((item) => {
+        const hours = item.spentH ?? item.estimateH
+        return '　· ' + item.title + (hours === null ? '' : '　' + hours + 'H')
+      })
+      .join('\n')
+  }
+
   function statsLine(kind, days) {
     const planned = days.filter((item) => item.parentId)
     const done = days.filter((item) => item.status === 'done')
@@ -455,6 +464,7 @@ export function apply(ctx) {
 
     const sections = {
       done: bulletHours(done) || '　-',
+      doneFlat: bulletHoursFlat(done) || '　-',
       hours: String(hours),
       left: leftOverride.trim() ? leftOverride : leftAuto,
       goals: narrative.trim() ? narrative : '　-',
@@ -1398,7 +1408,7 @@ export function apply(ctx) {
     const fields = ding.fields || []
     const mapping = ding.mapping || {}
     const byField = {
-      [mapping.done]: report.sections.done,
+      [mapping.done]: report.sections.doneFlat || report.sections.done,
       [mapping.hours]: report.sections.hours,
       [mapping.left]: report.sections.left,
       [mapping.risks]: risksText ? String(risksText) : '-',
