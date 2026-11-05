@@ -2391,7 +2391,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'table', width: '100%', tableLayout: 'fixed', borderSpacing: '10px' } },
+          { style: { display: 'table', width: 'calc(100% + 32px)', tableLayout: 'fixed', borderSpacing: '16px', margin: '-16px' } },
           h(
             'div',
             { style: { display: 'table-cell', width: '50%', verticalAlign: 'top', minWidth: 0 } },
@@ -2458,7 +2458,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'table', width: '100%', tableLayout: 'fixed', borderSpacing: '10px' } },
+          { style: { display: 'table', width: 'calc(100% + 32px)', tableLayout: 'fixed', borderSpacing: '16px', margin: '-16px' } },
           h(
             'div',
             { style: { display: 'table-cell', width: '50%', verticalAlign: 'top', minWidth: 0 } },
