@@ -5,7 +5,6 @@
  * M2：目标（KR）、周报/月报渲染、报告字段映射、分目录导出。
  */
 import path from 'node:path'
-import os from 'node:os'
 import { mkdir, readFile, writeFile, readdir, unlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { execFile } from 'node:child_process'
@@ -1012,9 +1011,7 @@ export function apply(ctx) {
       launcherCache = { kind: 'shell', command: configured }
       return launcherCache
     }
-    const base =
-      process.env.WORKBUDDY_HOME ||
-      path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'WorkBuddy', 'binaries', 'node')
+    const base = 'C:\\Users\\1\\.workbuddy\\binaries\\node'
     try {
       const versions = await readdir(path.join(base, 'versions'))
       const sorted = versions
