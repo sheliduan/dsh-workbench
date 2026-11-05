@@ -4084,6 +4084,36 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = useState(false)
       const [saved, setSaved] = useState('')
 
+      const [info, setInfo] = useState(null)
+      const [install, setInstall] = useState(null)
+      const [installing, setInstalling] = useState(false)
+
+      const refreshInfo = useCallback(async () => {
+        try {
+          const payload = await call('/dws/info', {})
+          setInfo(payload)
+          if (payload.install) setInstall(payload.install)
+          return payload
+        } catch (cause) {
+          return null
+        }
+      }, [])
+
+      const startInstall = useCallback(async () => {
+        setInstalling(true)
+        try {
+          const payload = await call('/dws/install/start', {})
+          setInstall(payload.install)
+        } catch (cause) {
+          toast('启动下载失败：' + String(cause.message || cause), 'error')
+          setInstalling(false)
+        }
+      }, [])
+
+      useEffect(() => {
+        refreshInfo()
+      }, [refreshInfo])
+
       const refreshStatus = useCallback(async () => {
         try {
           const payload = await call('/dws/status', {})
@@ -4094,6 +4124,34 @@ window.__ModuleLoader__.load({
           return null
         }
       }, [])
+
+      useEffect(() => {
+        const phase = install && install.phase
+        if (phase !== 'downloading' && phase !== 'extracting' && phase !== 'configuring') {
+          if (phase === 'done' || phase === 'failed') setInstalling(false)
+          return undefined
+        }
+        const timer = window.setInterval(async () => {
+          try {
+            const payload = await call('/dws/install/status', {})
+            setInstall(payload.install)
+            if (payload.install.phase === 'done') {
+              window.clearInterval(timer)
+              setInstalling(false)
+              await refreshInfo()
+              await refreshStatus()
+              toast('钉钉命令行安装完成')
+            } else if (payload.install.phase === 'failed') {
+              window.clearInterval(timer)
+              setInstalling(false)
+              toast('安装失败：' + payload.install.detail, 'error')
+            }
+          } catch (cause) {
+            // 保持轮询
+          }
+        }, 1500)
+        return () => window.clearInterval(timer)
+      }, [install, refreshInfo, refreshStatus])
 
       const startLogin = useCallback(async () => {
         setLoginBusy(true)
@@ -4392,6 +4450,65 @@ window.__ModuleLoader__.load({
                   style: { color: C.brand },
                 },
                 '重试',
+              ),
+            )
+          : null,
+        info && !info.found
+          ? h(
+              'div',
+              {
+                style: {
+                  border: '1px solid ' + C.line,
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  background: C.soft,
+                  fontSize: 12,
+                },
+              },
+              h('div', { style: { fontWeight: 600 } }, '未检测到钉钉命令行（dws）'),
+              h(
+                'div',
+                { style: { color: C.sub, lineHeight: 1.6 } },
+                '提交钉钉日志需要它。不装也能正常使用今日、计划、统计、报告和导出。点下面按钮自动下载（约 50MB），不需要安装 WorkBuddy。',
+              ),
+              install && (install.phase === 'downloading' || install.phase === 'extracting' || install.phase === 'configuring')
+                ? h(
+                    'div',
+                    { style: { display: 'flex', flexDirection: 'column', gap: 5 } },
+                    h(
+                      'div',
+                      { style: { height: 6, borderRadius: 999, background: C.track, overflow: 'hidden' } },
+                      h('div', {
+                        style: {
+                          width: Math.max(4, install.percent || 0) + '%',
+                          height: '100%',
+                          background: C.grad,
+                          transition: 'width .3s ease',
+                        },
+                      }),
+                    ),
+                    h('div', { style: { fontSize: 11, color: C.sub } }, install.detail || '处理中…'),
+                  )
+                : null,
+              install && install.phase === 'failed'
+                ? h('div', { style: { fontSize: 11.5, color: C.danger } }, '安装失败：' + install.detail)
+                : null,
+              h(
+                'div',
+                { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+                h(
+                  Btn,
+                  { small: true, primary: true, onClick: startInstall, disabled: installing },
+                  installing ? '安装中…' : '下载并安装',
+                ),
+                h(
+                  Btn,
+                  { small: true, onClick: refreshInfo },
+                  '重新检测',
+                ),
               ),
             )
           : null,

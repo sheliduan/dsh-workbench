@@ -8,6 +8,7 @@ import path from 'node:path'
 import { mkdir, readFile, writeFile, readdir, unlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import os from 'node:os'
+import { gunzipSync } from 'node:zlib'
 import { execFile, spawn } from 'node:child_process'
 
 export const name = 'workbench'
@@ -1029,6 +1030,19 @@ export function apply(ctx) {
     } catch (error) {
       // 退回 PATH 上的 dws
     }
+    const localPackage = path.join(dwsHome(), 'node_modules', DWS_PACKAGE)
+    if (
+      existsSync(path.join(localPackage, 'bin', 'dws.js')) &&
+      existsSync(path.join(localPackage, 'vendor', process.platform === 'win32' ? 'dws.exe' : 'dws'))
+    ) {
+      launcherCache = {
+        kind: 'node',
+        nodeExe: process.execPath,
+        dwsJs: path.join(localPackage, 'bin', 'dws.js'),
+        source: 'bundled',
+      }
+      return launcherCache
+    }
     launcherCache = { kind: 'shell', command: 'dws' }
     return launcherCache
   }
@@ -1072,6 +1086,177 @@ export function apply(ctx) {
       .replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '')
       .replace(/[\u2500-\u25ff]/g, '')
   }
+
+  // ---------------- dws 自动安装 ----------------
+
+  const DWS_PACKAGE = 'dingtalk-workspace-cli'
+
+  function dwsHome() {
+    return path.join(os.homedir(), '.dsh', 'workbench', 'dws')
+  }
+
+  let installState = { phase: 'idle', percent: 0, detail: '', version: '' }
+  let installAbort = null
+  let installRun = 0
+
+  function installSnapshot() {
+    return Object.assign({}, installState)
+  }
+
+  function untar(buffer) {
+    const entries = []
+    let offset = 0
+    while (offset + 512 <= buffer.length) {
+      const header = buffer.subarray(offset, offset + 512)
+      if (header.every((byte) => byte === 0)) break
+      let name = header.subarray(0, 100).toString('utf8').replace(/\0.*$/, '')
+      const prefix = header.subarray(345, 500).toString('utf8').replace(/\0.*$/, '')
+      if (prefix) name = prefix + '/' + name
+      const sizeText = header.subarray(124, 136).toString('utf8').replace(/\0.*$/, '').trim()
+      const size = parseInt(sizeText, 8) || 0
+      const type = String.fromCharCode(header[156] || 48)
+      const dataStart = offset + 512
+      const data = buffer.subarray(dataStart, dataStart + size)
+      entries.push({ name, type, data })
+      offset = dataStart + Math.ceil(size / 512) * 512
+    }
+    return entries
+  }
+
+  async function downloadToBuffer(url, onProgress, signal) {
+    const response = await fetch(url, { redirect: 'follow', signal })
+    if (!response.ok) throw new Error('下载失败 HTTP ' + response.status)
+    const total = Number(response.headers.get('content-length') || 0)
+    const chunks = []
+    let received = 0
+    for await (const chunk of response.body) {
+      chunks.push(chunk)
+      received += chunk.length
+      if (onProgress) onProgress(received, total)
+    }
+    return Buffer.concat(chunks)
+  }
+
+  const DWS_MIRRORS = [
+    'https://registry.npmmirror.com/' + DWS_PACKAGE + '/latest',
+    'https://registry.npmjs.org/' + DWS_PACKAGE + '/latest',
+  ]
+
+  async function resolveTarball() {
+    let lastError = null
+    for (const registry of DWS_MIRRORS) {
+      try {
+        const response = await fetch(registry, { signal: installAbort.signal })
+        if (!response.ok) throw new Error('HTTP ' + response.status)
+        const meta = await response.json()
+        const tarball = meta.dist && meta.dist.tarball
+        if (!tarball) throw new Error('包信息里没有下载地址')
+        return { tarball, version: meta.version || '' }
+      } catch (error) {
+        lastError = error
+        if (installAbort && installAbort.signal.aborted) throw error
+      }
+    }
+    throw lastError || new Error('无法获取包信息')
+  }
+
+  async function installDws() {
+    if (installState.phase === 'downloading' || installState.phase === 'extracting' || installState.phase === 'configuring') {
+      return installSnapshot()
+    }
+    const run = ++installRun
+    installAbort = new AbortController()
+    installState = { phase: 'downloading', percent: 0, detail: '正在获取版本信息…', version: '' }
+    try {
+      const resolved = await resolveTarball()
+      const tarball = resolved.tarball
+      installState.version = resolved.version
+      installState.detail = '正在下载 ' + (resolved.version || '') + '…'
+
+      const tgz = await downloadToBuffer(
+        tarball,
+        (received, total) => {
+          if (run !== installRun) return
+          if (total) installState.percent = Math.min(70, Math.round((received / total) * 70))
+          installState.detail =
+            '正在下载 ' + (resolved.version || '') + '（' + Math.round(received / 1024 / 1024) + ' MB）'
+        },
+        installAbort.signal,
+      )
+
+      installState.phase = 'extracting'
+      installState.percent = 75
+      installState.detail = '正在解压…'
+      const files = untar(gunzipSync(tgz))
+      const rootDir = path.join(dwsHome(), 'node_modules', DWS_PACKAGE)
+      await mkdir(rootDir, { recursive: true })
+      for (const entry of files) {
+        const relative = entry.name.replace(/^package\//, '')
+        if (!relative) continue
+        const target = path.join(rootDir, relative)
+        if (!target.startsWith(rootDir)) continue
+        if (entry.type === '5' || relative.endsWith('/')) {
+          await mkdir(target, { recursive: true })
+          continue
+        }
+        await mkdir(path.dirname(target), { recursive: true })
+        await writeFile(target, entry.data)
+      }
+
+      installState.phase = 'configuring'
+      installState.percent = 85
+      installState.detail = '正在准备命令行…'
+      const installerPath = path.join(rootDir, 'install.js')
+      if (existsSync(installerPath)) {
+        await new Promise((resolve) => {
+          const child = spawn(process.execPath, [installerPath], {
+            cwd: rootDir,
+            windowsHide: true,
+            env: Object.assign({}, process.env, { npm_config_global: 'false' }),
+          })
+          let output = ''
+          child.stdout.on('data', (chunk) => {
+            output += chunk.toString('utf8')
+            installState.detail = '正在准备命令行…' + output.slice(-80).replace(/\s+/g, ' ')
+          })
+          child.stderr.on('data', (chunk) => {
+            output += chunk.toString('utf8')
+          })
+          child.on('error', () => resolve(null))
+          child.on('exit', () => resolve(null))
+          setTimeout(() => {
+            try {
+              child.kill()
+            } catch (error) {
+              // 忽略
+            }
+            resolve(null)
+          }, 180000)
+        })
+      }
+
+      launcherCache = null
+      installState = {
+        phase: 'done',
+        percent: 100,
+        detail: '安装完成',
+        version: installState.version,
+      }
+      return installSnapshot()
+    } catch (error) {
+      if (installAbort && installAbort.signal.aborted) {
+        return installSnapshot()
+      }
+      installState = {
+        phase: 'failed',
+        percent: 0,
+        detail: String(error.message || error),
+        version: installState.version,
+      }
+      return installSnapshot()
+    }
+  }
+
 
   let loginSession = null
 
@@ -1735,6 +1920,34 @@ export function apply(ctx) {
         state.settings = normalizeSettings({ ...(state.settings || {}), ...body })
         await save()
         return send(res, 200, { ok: true, settings: state.settings, state: snapshot() })
+      }
+      if (action === '/dws/info') {
+        const launcher = await dwsLauncher()
+        return send(res, 200, {
+          ok: true,
+          found: launcher.kind === 'node',
+          source: launcher.source || 'workbuddy',
+          install: installSnapshot(),
+        })
+      }
+      if (action === '/dws/install/start') {
+        installDws()
+        return send(res, 200, { ok: true, install: installSnapshot() })
+      }
+      if (action === '/dws/install/cancel') {
+        installRun += 1
+        if (installAbort) {
+          try {
+            installAbort.abort()
+          } catch (error) {
+            // 忽略
+          }
+        }
+        installState = { phase: 'idle', percent: 0, detail: '已取消', version: '' }
+        return send(res, 200, { ok: true, install: installSnapshot() })
+      }
+      if (action === '/dws/install/status') {
+        return send(res, 200, { ok: true, install: installSnapshot() })
       }
       if (action === '/dws/login/start') {
         const snapshot = await startDwsLogin()
