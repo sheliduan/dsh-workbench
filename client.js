@@ -1988,7 +1988,7 @@ window.__ModuleLoader__.load({
     }
 
     function Donut({ segments, size, centerLabel, centerValue, onPick }) {
-      const side = size || 156
+      const side = size || 176
       const radius = side / 2 - 14
       const circumference = 2 * Math.PI * radius
       const total = segments.reduce((sum, entry) => sum + entry.value, 0)
@@ -2035,11 +2035,11 @@ window.__ModuleLoader__.load({
 
     function LineTrend({ buckets }) {
       const width = 560
-      const height = 150
+      const height = 178
       const padX = 20
-      const padY = 16
+      const padY = 18
       const innerW = width - padX * 2
-      const innerH = height - padY - 22
+      const innerH = height - padY - 26
       const maxDone = Math.max(1, ...buckets.map((bucket) => bucket.done))
       const maxHours = Math.max(1, ...buckets.map((bucket) => bucket.hours))
       const stepX = buckets.length > 1 ? innerW / (buckets.length - 1) : 0
@@ -2084,31 +2084,31 @@ window.__ModuleLoader__.load({
       const maxValue = Math.max(1, ...buckets.map((bucket) => Math.max(bucket.estimate, bucket.hours)))
       return h(
         'div',
-        { style: { display: 'flex', alignItems: 'flex-end', gap: 8, height: 150, padding: '0 4px', overflowX: 'auto' } },
+        { style: { display: 'flex', alignItems: 'flex-end', gap: 8, height: 178, padding: '0 4px', overflowX: 'auto' } },
         buckets.map((bucket) =>
           h(
             'div',
             { key: bucket.key, style: { flex: '1 1 0', minWidth: 22, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
             h(
               'div',
-              { style: { display: 'flex', alignItems: 'flex-end', gap: 3, height: 108 } },
+              { style: { display: 'flex', alignItems: 'flex-end', gap: 4, height: 130 } },
               h('div', {
                 title: bucket.label + ' 预估 ' + bucket.estimate + 'h',
-                style: { width: 10, height: Math.max(2, Math.round((bucket.estimate / maxValue) * 108)), borderRadius: 3, background: C.track },
+                style: { width: 12, height: Math.max(2, Math.round((bucket.estimate / maxValue) * 130)), borderRadius: 3, background: C.track },
               }),
               h('div', {
                 title: bucket.label + ' 实际 ' + bucket.hours + 'h',
                 onClick: onPick ? () => onPick(bucket) : undefined,
                 style: {
-                  width: 10,
-                  height: Math.max(2, Math.round((bucket.hours / maxValue) * 108)),
+                  width: 12,
+                  height: Math.max(2, Math.round((bucket.hours / maxValue) * 130)),
                   borderRadius: 3,
                   background: C.grad,
                   cursor: onPick ? 'pointer' : 'default',
                 },
               }),
             ),
-            h('div', { style: { fontSize: 9.5, color: C.sub } }, bucket.label),
+            h('div', { style: { fontSize: 10, color: C.sub } }, bucket.label),
           ),
         ),
       )
@@ -2130,7 +2130,7 @@ window.__ModuleLoader__.load({
             },
             h(
               'span',
-              { style: { width: 96, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: C.text } },
+              { style: { width: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: C.text } },
               row.key,
             ),
             h(
@@ -2147,7 +2147,7 @@ window.__ModuleLoader__.load({
     function ChartCard({ title, hint, children, actions }) {
       return h(
         'div',
-        cardStyle({ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, width: '100%', minHeight: 214 }),
+        cardStyle({ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0, width: '100%', minHeight: 248 }),
         h(
           'div',
           { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
@@ -2255,10 +2255,10 @@ window.__ModuleLoader__.load({
       const tile = (label, value, hint, accent) =>
         h(
           'div',
-          cardStyle({ flex: '1 1 140px', minWidth: 130, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 2 }),
-          h('div', { style: { fontSize: 10.5, color: C.sub, letterSpacing: '.05em' } }, label),
-          h('div', { style: { fontSize: 21, fontWeight: 700, color: accent || C.text, letterSpacing: '-.02em' } }, value),
-          hint ? h('div', { style: { fontSize: 10, color: C.sub } }, hint) : null,
+          cardStyle({ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }),
+          h('div', { style: { fontSize: 11.5, color: C.sub, letterSpacing: '.05em' } }, label),
+          h('div', { style: { fontSize: 27, fontWeight: 700, color: accent || C.text, letterSpacing: '-.02em', lineHeight: 1.15 } }, value),
+          hint ? h('div', { style: { fontSize: 11, color: C.sub } }, hint) : null,
         )
 
       return h(
@@ -2282,7 +2282,7 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
+          { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 10 } },
           tile('完成率', completion + '%', done.length + ' / ' + days.length + ' 条'),
           tile('计划达成', planRate === null ? '—' : planRate + '%', '计划外 ' + (offRate === null ? '—' : offRate + '%'), C.brand),
           tile('实际工时', spent + 'h', '预估 ' + estimate + 'h'),
@@ -2290,10 +2290,10 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' } },
+          { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, alignItems: 'stretch' } },
           h(
             'div',
-            { style: { flex: '1 1 300px', minWidth: 270, display: 'flex' } },
+            { style: { display: 'flex' } },
             h(
               ChartCard,
               { title: '任务构成', hint: '点击扇区查看清单' },
@@ -2336,13 +2336,20 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { flex: '1 1 380px', minWidth: 300, display: 'flex' } },
+            { style: { display: 'flex' } },
             h(
               ChartCard,
               {
                 title: '完成与工时趋势',
                 hint: '悬停看单点',
-                actions: h('span', { style: { marginLeft: 8, fontSize: 10.5, color: C.sub } }, '— 完成数　— 工时'),
+                actions: h(
+                  'span',
+                  { style: { marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: C.sub } },
+                  h('span', { style: { width: 12, height: 3, borderRadius: 2, background: C.brand } }),
+                  '完成数',
+                  h('span', { style: { width: 12, height: 3, borderRadius: 2, background: C.warn, marginLeft: 6 } }),
+                  '工时',
+                ),
               },
               h(LineTrend, { buckets }),
             ),
@@ -2350,10 +2357,10 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { style: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' } },
+          { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, alignItems: 'stretch' } },
           h(
             'div',
-            { style: { flex: '1 1 300px', minWidth: 270, display: 'flex' } },
+            { style: { display: 'flex' } },
             h(
               ChartCard,
               { title: '预估 vs 实际工时', hint: '点击实际柱查看任务' },
@@ -2365,7 +2372,7 @@ window.__ModuleLoader__.load({
           ),
           h(
             'div',
-            { style: { flex: '1 1 300px', minWidth: 270, display: 'flex' } },
+            { style: { display: 'flex' } },
             h(
               ChartCard,
               { title: '计划条目分布', hint: '点击查看清单' },
