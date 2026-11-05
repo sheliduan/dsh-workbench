@@ -2082,6 +2082,97 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function BurnUp({ buckets }) {
+      const width = 560
+      const height = 178
+      const padX = 20
+      const padY = 18
+      const innerW = width - padX * 2
+      const innerH = height - padY - 26
+      const n = buckets.length || 1
+
+      const totalScope = buckets.reduce((sum, bucket) => sum + bucket.done + bucket.open, 0)
+      const maxY = Math.max(1, totalScope)
+      const stepX = n > 1 ? innerW / (n - 1) : 0
+
+      let running = 0
+      const actual = buckets.map((bucket, index) => {
+        running += bucket.done
+        return [padX + stepX * index, padY + innerH - (running / maxY) * innerH]
+      })
+      const ideal = buckets.map((_, index) => [
+        padX + stepX * index,
+        padY + innerH - (((index + 1) / n) * totalScope / maxY) * innerH,
+      ])
+
+      const finalActual = running
+      const gap = Math.round(finalActual - totalScope)
+
+      const labelStep = Math.max(1, Math.ceil(n / 7))
+
+      return h(
+        'div',
+        { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 11.5, color: C.sub } },
+          h('span', null, '已累计完成'),
+          h('span', { style: { fontSize: 18, fontWeight: 700, color: C.text } }, finalActual + ' / ' + totalScope),
+          h(
+            'span',
+            { style: { marginLeft: 'auto', color: gap >= 0 ? C.ok : C.danger } },
+            gap >= 0 ? '按进度完成' : '落后 ' + Math.abs(gap) + ' 条',
+          ),
+        ),
+        h(
+          'svg',
+          { width: '100%', height, viewBox: '0 0 ' + width + ' ' + height, preserveAspectRatio: 'none' },
+          [0, 0.5, 1].map((ratio) =>
+            h('line', {
+              key: ratio,
+              x1: padX,
+              x2: width - padX,
+              y1: padY + innerH * ratio,
+              y2: padY + innerH * ratio,
+              stroke: C.line,
+              strokeDasharray: ratio === 0 ? 'none' : '3 4',
+            }),
+          ),
+          h('polyline', {
+            points: ideal.map((point) => point.join(',')).join(' '),
+            fill: 'none',
+            stroke: C.sub,
+            strokeWidth: 1.5,
+            strokeDasharray: '5 5',
+            opacity: 0.7,
+          }),
+          h('polyline', {
+            points: actual.map((point) => point.join(',')).join(' '),
+            fill: 'none',
+            stroke: C.brand,
+            strokeWidth: 2.6,
+            strokeLinejoin: 'round',
+          }),
+          actual.map((point, index) =>
+            h(
+              'circle',
+              { key: buckets[index].key, cx: point[0], cy: point[1], r: 3.2, fill: C.brand },
+              h('title', null, buckets[index].label + '：累计完成 ' + buckets.slice(0, index + 1).reduce((s, b) => s + b.done, 0)),
+            ),
+          ),
+          buckets.map((bucket, index) =>
+            Math.round((index + 1) % Math.max(1, Math.ceil(n / 7))) === 0 || index === n - 1
+              ? h(
+                  'text',
+                  { key: 'l' + bucket.key, x: padX + stepX * index, y: height - 6, textAnchor: 'middle', fontSize: 9, fill: C.sub },
+                  bucket.label,
+                )
+              : null,
+          ),
+        ),
+      )
+    }
+
     function GroupedBars({ buckets, onPick }) {
       const maxValue = Math.max(1, ...buckets.map((bucket) => Math.max(bucket.estimate, bucket.hours)))
       return h(
@@ -2200,6 +2291,7 @@ window.__ModuleLoader__.load({
               key: dateKey,
               label: weekdayNames[index],
               done: dayItems.filter((item) => item.status === 'done').length,
+              open: dayItems.filter((item) => item.status !== 'done' && item.status !== 'dropped').length,
               hours: round1(dayItems.reduce((sum, item) => sum + (item.spentH || 0), 0)),
               estimate: round1(dayItems.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
               items: dayItems,
@@ -2213,6 +2305,7 @@ window.__ModuleLoader__.load({
               key: cursor,
               label: String(Number(cursor.slice(8))),
               done: dayItems.filter((item) => item.status === 'done').length,
+              open: dayItems.filter((item) => item.status !== 'done' && item.status !== 'dropped').length,
               hours: round1(dayItems.reduce((sum, item) => sum + (item.spentH || 0), 0)),
               estimate: round1(dayItems.reduce((sum, item) => sum + (item.estimateH || 0), 0)),
               items: dayItems,
@@ -2354,6 +2447,26 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, alignItems: 'stretch' } },
+          h(
+            'div',
+            { style: { display: 'flex' } },
+            h(
+              ChartCard,
+              {
+                title: '累计完成与理想进度',
+                hint: '虚线=理想节奏',
+                actions: h(
+                  'span',
+                  { style: { marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: C.sub } },
+                  h('span', { style: { width: 12, height: 3, borderRadius: 2, background: C.brand } }),
+                  '实际',
+                  h('span', { style: { width: 12, height: 3, borderRadius: 2, background: C.sub, marginLeft: 6, opacity: 0.7 } }),
+                  '理想',
+                ),
+              },
+              h(BurnUp, { buckets }),
+            ),
+          ),
           h(
             'div',
             { style: { display: 'flex' } },
