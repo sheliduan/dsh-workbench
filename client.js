@@ -16,26 +16,31 @@ window.__ModuleLoader__.load({
     const R = { sm: 8, md: 12, lg: 16, pill: 999 }
     // 间距六档
     const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 }
-    // 阴影三档
+    // 阴影三档（用 label 色的极淡描边，浅色下几乎不可见，深色下勾出卡片轮廓）
+    const RING = '0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-primary, #1b1b1f) 7%, transparent)'
     const SH = {
-      card: '0 1px 2px rgba(0,0,0,.05), 0 10px 28px rgba(0,0,0,.07)',
-      soft: '0 1px 2px rgba(0,0,0,.04)',
-      pop: '0 12px 32px rgba(0,0,0,.12)',
+      card: RING + ', 0 10px 28px rgba(0,0,0,.07)',
+      soft: '0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-primary, #1b1b1f) 5%, transparent)',
+      pop: '0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-primary, #1b1b1f) 9%, transparent), 0 12px 32px rgba(0,0,0,.18)',
     }
     const C = {
-      text: 'var(--dsw-alias-text-primary, #1b1b1f)',
-      sub: 'var(--dsw-alias-text-secondary, #6b6b74)',
-      line: 'var(--dsw-alias-border-secondary, rgba(0,0,0,0.09))',
-      soft: 'var(--dsw-alias-bg-secondary, rgba(0,0,0,0.035))',
-      panel: 'var(--dsw-alias-bg-primary, #ffffff)',
-      brand: 'var(--wb-accent, #4d6bfe)',
-      brandSoft: 'color-mix(in srgb, var(--wb-accent, #4d6bfe) 12%, transparent)',
-      brandLine: 'color-mix(in srgb, var(--wb-accent, #4d6bfe) 38%, transparent)',
-      grad: 'linear-gradient(135deg, var(--wb-accent, #4d6bfe), var(--wb-accent2, #8b5cf6))',
-      danger: 'var(--dsw-alias-text-danger, #d93025)',
-      ok: '#10b981',
-      warn: '#f59e0b',
-      track: 'color-mix(in srgb, var(--dsw-alias-text-primary, #1b1b1f) 10%, transparent)',
+      text: 'var(--dsw-alias-label-primary, #1b1b1f)',
+      sub: 'var(--dsw-alias-label-secondary, #6b6b74)',
+      line: 'var(--dsw-alias-border-l1, rgba(0,0,0,0.09))',
+      lineStrong: 'var(--dsw-alias-border-l2, rgba(0,0,0,0.18))',
+      soft: 'var(--dsw-alias-bg-layer-2, rgba(0,0,0,0.035))',
+      panel: 'var(--dsw-alias-bg-layer-1, #ffffff)',
+      overlay: 'var(--dsw-alias-bg-overlay, #ffffff)',
+      base: 'var(--dsw-alias-bg-base, #f7f7f8)',
+      brand: 'var(--wb-accent, #10b981)',
+      brandSoft: 'color-mix(in srgb, var(--wb-accent, #10b981) 14%, transparent)',
+      brandLine: 'color-mix(in srgb, var(--wb-accent, #10b981) 40%, transparent)',
+      grad: 'linear-gradient(135deg, var(--wb-accent, #10b981), var(--wb-accent2, #22d3ee))',
+      danger: 'var(--dsw-alias-state-error-primary, #d93025)',
+      ok: 'var(--dsw-alias-state-success-primary, #10b981)',
+      warn: 'var(--dsw-alias-state-warn-primary, #f59e0b)',
+      idle: 'var(--dsw-alias-state-idle-primary, #9ca3af)',
+      track: 'color-mix(in srgb, var(--dsw-alias-label-primary, #1b1b1f) 12%, transparent)',
     }
 
     const THEMES = {
@@ -240,6 +245,7 @@ window.__ModuleLoader__.load({
                 background: value === option.value ? C.panel : 'transparent',
                 color: value === option.value ? C.text : C.sub,
                 fontWeight: value === option.value ? 600 : 400,
+                boxShadow: value === option.value ? SH.soft : 'none',
               },
             },
             option.label,
@@ -298,7 +304,7 @@ window.__ModuleLoader__.load({
             position: 'fixed',
             inset: 0,
             zIndex: 40,
-            background: 'rgba(0,0,0,0.28)',
+            background: 'rgba(0,0,0,0.42)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -319,7 +325,7 @@ window.__ModuleLoader__.load({
               background: C.panel,
               color: C.text,
               borderRadius: R.lg,
-              boxShadow: '0 24px 70px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,.08)',
+              boxShadow: SH.pop,
             },
           },
           h('div', { style: { padding: '14px 18px', borderBottom: '1px solid ' + C.line, fontSize: 13, fontWeight: 600 } }, title),
@@ -345,7 +351,7 @@ window.__ModuleLoader__.load({
           },
         )
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,.06);padding:0 3px;border-radius:3px">$1</code>')
+        .replace(/`([^`]+)`/g, '<code style="background:color-mix(in srgb, var(--dsw-alias-label-primary, #1b1b1f) 8%, transparent);padding:0 3px;border-radius:3px">$1</code>')
         .replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
     }
 
@@ -5452,7 +5458,7 @@ window.__ModuleLoader__.load({
                 padding: '10px 15px',
                 borderRadius: R.md,
                 background: C.panel,
-                boxShadow: '0 12px 36px rgba(0,0,0,.22), 0 2px 6px rgba(0,0,0,.08)',
+                boxShadow: SH.pop,
                 borderLeft: '3px solid ' + (toast.type === 'error' ? C.danger : C.ok),
                 fontSize: 12,
                 color: C.text,
