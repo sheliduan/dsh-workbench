@@ -4613,19 +4613,32 @@ window.__ModuleLoader__.load({
 
       useEffect(() => {
         let alive = true
-        Promise.all([call('/state'), call('/dws/status', {}), call('/dws/templates', {})])
-          .then(([statePayload, statusPayload, templatePayload]) => {
+        ;(async () => {
+          try {
+            const statePayload = await call('/state')
             if (!alive) return
             const ding = (statePayload.state.settings && statePayload.state.settings.dingtalk) || {}
-            setStatus(statusPayload.status)
-            setTemplates(templatePayload.templates)
             setTemplateId(ding.templateId || '')
             setFields(ding.fields || [])
             setMapping(ding.mapping || { done: '', hours: '', left: '', risks: '' })
             setRecipients((current) => (current.length > 0 ? current : ding.recipients || []))
+
+            const statusPayload = await call('/dws/status', {})
+            if (!alive) return
+            setStatus(statusPayload.status)
+            const loggedIn = Boolean(statusPayload.status && statusPayload.status.authenticated && statusPayload.status.tokenValid)
+            if (!loggedIn) return
+            try {
+              const templatePayload = await call('/dws/templates', {})
+              if (alive) setTemplates(templatePayload.templates)
+            } catch (cause) {
+              if (alive) setError(String(cause.message || cause))
+            }
             if (ding.templateName && (!ding.fields || ding.fields.length === 0)) loadTemplate(ding.templateName)
-          })
-          .catch((cause) => alive && setError(String(cause.message || cause)))
+          } catch (cause) {
+            if (alive) setError(String(cause.message || cause))
+          }
+        })()
         return () => {
           alive = false
         }

@@ -1096,10 +1096,42 @@ export function apply(ctx) {
         timeout: options.timeout || 60000,
         maxBuffer: 8 * 1024 * 1024,
         windowsHide: true,
-        encoding: 'utf8',
+        encoding: 'buffer',
+      }
+      const decodeUtf8 = (value) => (Buffer.isBuffer(value) ? value.toString('utf8') : String(value || ''))
+      const decodeLocal = (value) => {
+        if (!Buffer.isBuffer(value)) return String(value || '')
+        try {
+          return new TextDecoder('gbk').decode(value)
+        } catch (decodeError) {
+          return value.toString('utf8')
+        }
+      }
+      const friendlyDwsError = (raw) => {
+        let message = String(raw || '').trim()
+        try {
+          const parsed = JSON.parse(message)
+          const detail = parsed.error || parsed
+          if (detail && typeof detail === 'object') {
+            message = String(detail.message || detail.hint || message)
+          }
+        } catch (parseError) {
+          // 不是 JSON，保持原文
+        }
+        message = message
+          .replace(/\s*hint: Use --verbose[^\n]*/gi, '')
+          .replace(/可用命令[:：][\s\S]*$/i, '')
+          .trim()
+        if (/load access token|secure data file|\.dws[\\/]\.data|auth login|access token/i.test(message)) {
+          return '钉钉尚未登录或登录已失效。请在「插件 → 工作台 → 配置」里点「绑定钉钉」完成授权后再试。'
+        }
+        if (/不是内部或外部命令|not recognized/i.test(message)) {
+          return '找不到 dws 命令行。请在配置页点「下载并安装」，或确认已安装钉钉 WorkBuddy 命令行工具。'
+        }
+        return message.slice(0, 300)
       }
       const onDone = (error, stdout, stderr) => {
-        const text = String(stdout || '').trim()
+        const text = decodeUtf8(stdout).trim()
         if (text) {
           try {
             resolve(JSON.parse(text))
@@ -1109,8 +1141,8 @@ export function apply(ctx) {
             return
           }
         }
-        const detail = String(stderr || (error && error.message) || '').trim()
-        reject(new Error('dws 调用失败：' + (detail.slice(0, 400) || '无输出')))
+        const raw = decodeLocal(stderr).trim() || decodeLocal(error && error.message).trim()
+        reject(new Error('dws 调用失败：' + (friendlyDwsError(raw) || '无输出')))
       }
       if (launcher.kind === 'node') {
         execFile(launcher.nodeExe, [launcher.dwsJs, ...args], execOptions, onDone)
@@ -2016,9 +2048,20 @@ export function apply(ctx) {
       const body = await readBody(req)
 
       if (action === '/item/save') {
+        const before = state.items.find((entry) => entry.id === body.id)
+        const previousStatus = before ? before.status : null
         const item = saveItem(body)
         await save()
-        return send(res, 200, { ok: true, item, state: snapshot() })
+        let sync = null
+        if (previousStatus !== null && previousStatus !== item.status && item.level === 'day' && item.link && item.link.issueIid) {
+          try {
+            const result = await gitlabSync({ itemId: item.id })
+            sync = { ok: true, warnings: result.warnings }
+          } catch (error) {
+            sync = { ok: false, error: String((error && error.message) || error) }
+          }
+        }
+        return send(res, 200, { ok: true, item, sync, state: snapshot() })
       }
       if (action === '/item/delete') {
         const deleted = removeItem(String(body.id || ''))
