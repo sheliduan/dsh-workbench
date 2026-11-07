@@ -231,12 +231,26 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function Segmented({ value, options, onChange }) {
+    function Segmented({ value, options, onChange, accent }) {
       return h(
         'div',
-        { style: { display: 'flex', gap: S.xs, background: C.soft, borderRadius: R.sm, padding: 3 } },
-        options.map((option) =>
-          h(
+        {
+          style: {
+            display: 'flex',
+            gap: S.xs,
+            borderRadius: R.md,
+            padding: 3,
+            background: accent
+              ? 'linear-gradient(135deg, color-mix(in srgb, var(--wb-accent, #10b981) 12%, transparent), color-mix(in srgb, var(--wb-accent2, #22d3ee) 10%, transparent))'
+              : C.soft,
+            boxShadow: accent
+              ? 'inset 0 0 0 1px color-mix(in srgb, var(--wb-accent, #10b981) 22%, transparent)'
+              : 'none',
+          },
+        },
+        options.map((option) => {
+          const active = value === option.value
+          return h(
             'button',
             {
               key: option.value,
@@ -248,15 +262,20 @@ window.__ModuleLoader__.load({
                 fontSize: 12,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                background: value === option.value ? C.panel : 'transparent',
-                color: value === option.value ? C.text : C.sub,
-                fontWeight: value === option.value ? 600 : 400,
-                boxShadow: value === option.value ? SH.soft : 'none',
+                background: active ? (accent ? C.grad : C.panel) : 'transparent',
+                color: active ? (accent ? '#fff' : C.text) : accent ? C.text : C.sub,
+                fontWeight: active ? 600 : 400,
+                boxShadow: active
+                  ? accent
+                    ? '0 2px 10px color-mix(in srgb, var(--wb-accent, #10b981) 35%, transparent)'
+                    : SH.soft
+                  : 'none',
+                transition: 'background .15s ease, color .15s ease',
               },
             },
             option.label,
-          ),
-        ),
+          )
+        }),
       )
     }
 
@@ -5625,6 +5644,7 @@ window.__ModuleLoader__.load({
             ),
             h(Segmented, {
               value: tab,
+              accent: true,
               options: [
                 { value: 'today', label: '今日' },
                 { value: 'plan', label: '计划' },
