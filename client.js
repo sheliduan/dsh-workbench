@@ -57,6 +57,12 @@ window.__ModuleLoader__.load({
       }
     }
 
+    function friendlyDate(dateStr) {
+      const date = parseDate(dateStr)
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      return date.getMonth() + 1 + '月' + date.getDate() + '日 ' + weekdays[date.getDay()]
+    }
+
     const STATUS = { todo: '待办', doing: '进行中', done: '已完成', dropped: '已放弃' }
 
     // ---------------- utils ----------------
@@ -5518,6 +5524,7 @@ window.__ModuleLoader__.load({
       const [tab, setTab] = useState('today')
       const [form, setForm] = useState(null)
       const [settingsOpen, setSettingsOpen] = useState(false)
+      const [paletteOpen, setPaletteOpen] = useState(false)
       const [themeName, setThemeName] = useState(() => {
         try {
           const saved = window.localStorage.getItem('wb-theme')
@@ -5582,24 +5589,40 @@ window.__ModuleLoader__.load({
         },
         h(
           'div',
-          { style: { flex: '0 0 auto', padding: '10px 20px 0' } },
+          {
+            style: {
+              flex: '0 0 auto',
+              position: 'sticky',
+              top: 0,
+              zIndex: 20,
+              background: C.base,
+              borderBottom: '1px solid ' + C.line,
+            },
+          },
           h(
             'div',
             {
               style: {
                 maxWidth: 980,
                 margin: '0 auto',
+                height: 52,
                 display: 'flex',
                 alignItems: 'center',
                 gap: S.md,
-                flexWrap: 'wrap',
-                padding: '8px 12px',
-                borderRadius: R.lg,
-                background: 'linear-gradient(120deg, ' + C.brandSoft + ', transparent 62%)',
+                padding: '0 20px',
+                boxSizing: 'border-box',
               },
             },
-            h('div', { style: { fontSize: 13, fontWeight: 700, letterSpacing: '-.01em' } }, '工作台'),
-            h('div', { style: { color: C.sub, fontSize: 12 } }, state.today),
+            h(
+              'div',
+              { style: { flex: '1 1 0', display: 'flex', alignItems: 'baseline', gap: S.sm, minWidth: 0 } },
+              h('span', { style: { fontSize: 13, fontWeight: 700, letterSpacing: '-.01em' } }, '工作台'),
+              h(
+                'span',
+                { style: { fontSize: 12, color: C.sub, whiteSpace: 'nowrap' } },
+                friendlyDate(state.today),
+              ),
+            ),
             h(Segmented, {
               value: tab,
               options: [
@@ -5610,36 +5633,115 @@ window.__ModuleLoader__.load({
               ],
               onChange: setTab,
             }),
-            h('div', { style: { flex: 1 } }),
             h(
               'div',
-              { style: { display: 'flex', gap: S.sm, alignItems: 'center' } },
-              Object.keys(THEMES).map((key) =>
-                h('button', {
-                  key,
-                  title: '配色：' + THEMES[key].name,
-                  onClick: () => {
-                    setThemeName(key)
-                    try {
-                      window.localStorage.setItem('wb-theme', key)
-                    } catch (error) {
-                      // 忽略
-                    }
+              { style: { flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: S.sm } },
+              h(
+                'div',
+                { style: { position: 'relative' } },
+                h(
+                  'button',
+                  {
+                    title: '配色',
+                    onClick: () => setPaletteOpen((open) => !open),
+                    style: {
+                      width: 28,
+                      height: 28,
+                      padding: 0,
+                      borderRadius: R.sm,
+                      border: '1px solid ' + (paletteOpen ? C.brandLine : C.line),
+                      background: C.panel,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    },
                   },
-                  style: {
-                    width: 15,
-                    height: 15,
-                    padding: 0,
-                    borderRadius: R.pill,
-                    cursor: 'pointer',
-                    border: themeName === key ? '2px solid ' + C.text : '2px solid transparent',
-                    background: 'linear-gradient(135deg, ' + THEMES[key].accent + ', ' + THEMES[key].accent2 + ')',
-                  },
-                }),
+                  h('span', {
+                    style: {
+                      width: 13,
+                      height: 13,
+                      borderRadius: R.pill,
+                      background:
+                        'linear-gradient(135deg, ' +
+                        THEMES[themeName].accent +
+                        ', ' +
+                        THEMES[themeName].accent2 +
+                        ')',
+                    },
+                  }),
+                ),
+                paletteOpen
+                  ? h('div', {
+                      onClick: () => setPaletteOpen(false),
+                      style: { position: 'fixed', inset: 0, zIndex: 28 },
+                    })
+                  : null,
+                paletteOpen
+                  ? h(
+                      'div',
+                      {
+                        style: {
+                          position: 'absolute',
+                          right: 0,
+                          top: 34,
+                          zIndex: 29,
+                          background: C.panel,
+                          borderRadius: R.md,
+                          boxShadow: SH.pop,
+                          padding: 6,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 2,
+                          minWidth: 140,
+                        },
+                      },
+                      Object.keys(THEMES).map((key) =>
+                        h(
+                          'button',
+                          {
+                            key,
+                            onClick: () => {
+                              setThemeName(key)
+                              setPaletteOpen(false)
+                              try {
+                                window.localStorage.setItem('wb-theme', key)
+                              } catch (error) {
+                                // 忽略
+                              }
+                            },
+                            style: {
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: S.sm,
+                              border: 'none',
+                              background: themeName === key ? C.brandSoft : 'transparent',
+                              color: C.text,
+                              cursor: 'pointer',
+                              fontFamily: 'inherit',
+                              fontSize: 12,
+                              padding: '6px 8px',
+                              borderRadius: R.sm,
+                            },
+                          },
+                          h('span', {
+                            style: {
+                              width: 12,
+                              height: 12,
+                              borderRadius: R.pill,
+                              background:
+                                'linear-gradient(135deg, ' + THEMES[key].accent + ', ' + THEMES[key].accent2 + ')',
+                            },
+                          }),
+                          h('span', { style: { flex: 1, textAlign: 'left' } }, THEMES[key].name),
+                          themeName === key ? h('span', { style: { color: C.brand, fontSize: 11 } }, '✓') : null,
+                        ),
+                      ),
+                    )
+                  : null,
               ),
+              h(Btn, { small: true, onClick: () => setSettingsOpen(true) }, '设置'),
             ),
-            h(Btn, { small: true, onClick: () => setSettingsOpen(true) }, '设置'),
-            h(Btn, { small: true, onClick: reload }, '刷新'),
           ),
         ),
         h(
