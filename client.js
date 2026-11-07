@@ -3524,21 +3524,29 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function DocSection({ title, hint, children, accent, extra }) {
+    function DocSection({ title, hint, children, extra, last }) {
       return h(
         'section',
-        { style: { display: 'flex', flexDirection: 'column', gap: S.sm } },
+        {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: S.sm,
+            paddingBottom: last ? 0 : S.sm,
+            borderBottom: last ? 'none' : '1px solid ' + C.line,
+          },
+        },
         h(
           'div',
-          { style: { display: 'flex', alignItems: 'baseline', gap: S.sm, borderBottom: '1px solid ' + C.line, paddingBottom: 6 } },
+          { style: { display: 'flex', alignItems: 'baseline', gap: S.sm } },
           h(
             'span',
             {
               style: {
                 fontSize: 12,
-                fontWeight: 600,
-                letterSpacing: '.06em',
-                color: accent ? C.brand : C.sub,
+                fontWeight: 700,
+                letterSpacing: '.04em',
+                color: C.brand,
               },
             },
             title,
@@ -3872,7 +3880,6 @@ window.__ModuleLoader__.load({
                 {
                   title: '一、目标推进 / 小结',
                   hint: '可直接编辑，失焦自动保存',
-                  accent: true,
                   extra: h(
                     Btn,
                     { small: true, onClick: () => runAi('goals'), disabled: aiBusy },
@@ -3955,7 +3962,7 @@ window.__ModuleLoader__.load({
             {
               title: kind === 'daily' ? '三、未完成工作和明天计划' : '四、未完成 / 下一步计划',
               hint: '可直接编辑，失焦自动保存',
-              accent: true,
+              last: true,
               extra: h(
                 Btn,
                 { small: true, onClick: () => runAi('left'), disabled: aiBusy },
