@@ -5624,7 +5624,7 @@ window.__ModuleLoader__.load({
               style: {
                 maxWidth: 980,
                 margin: '0 auto',
-                height: 52,
+                height: 58,
                 display: 'flex',
                 alignItems: 'center',
                 gap: S.md,
@@ -5634,8 +5634,39 @@ window.__ModuleLoader__.load({
             },
             h(
               'div',
-              { style: { flex: '1 1 0', display: 'flex', alignItems: 'baseline', gap: S.sm, minWidth: 0 } },
-              h('span', { style: { fontSize: 13, fontWeight: 700, letterSpacing: '-.01em' } }, '工作台'),
+              { style: { flex: '1 1 0', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 } },
+              h('span', {
+                style: {
+                  width: 7,
+                  height: 7,
+                  borderRadius: R.pill,
+                  background: C.grad,
+                  flex: '0 0 auto',
+                  boxShadow: '0 0 0 3px ' + C.brandSoft,
+                },
+              }),
+              h(
+                'span',
+                {
+                  style: {
+                    fontSize: 17,
+                    fontWeight: 700,
+                    letterSpacing: '-.02em',
+                    lineHeight: 1.1,
+                    whiteSpace: 'nowrap',
+                  },
+                },
+                '工作台',
+              ),
+              h('span', {
+                style: {
+                  width: 1,
+                  height: 13,
+                  background: C.line,
+                  flex: '0 0 auto',
+                  margin: '0 2px',
+                },
+              }),
               h(
                 'span',
                 { style: { fontSize: 12, color: C.sub, whiteSpace: 'nowrap' } },
