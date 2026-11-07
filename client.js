@@ -3687,20 +3687,6 @@ window.__ModuleLoader__.load({
         }
       }, [aiPreview, saveField])
 
-      const resetDefaults = useCallback(async () => {
-        setBusy(true)
-        try {
-          await call('/narrative/clear', { kind, key, field: 'left' })
-          if (kind !== 'daily') await call('/narrative/clear', { kind, key, field: 'goals' })
-          await load()
-          notify('已恢复默认内容')
-        } catch (cause) {
-          notify(String(cause.message || cause), 'error')
-        } finally {
-          setBusy(false)
-        }
-      }, [kind, key, load, notify])
-
       const copy = useCallback(() => {
         if (!report) return
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -3823,8 +3809,6 @@ window.__ModuleLoader__.load({
                 matchCount + ' 处',
               )
             : null,
-          h(Btn, { small: true, onClick: resetDefaults, disabled: busy }, '恢复默认'),
-          h(Btn, { small: true, onClick: load, disabled: busy }, busy ? '刷新中…' : '刷新'),
           h(Btn, { small: true, onClick: copy }, '复制'),
           h(Btn, { small: true, onClick: exportFile, title: '导出 Markdown' }, 'MD'),
           h(Btn, { small: true, onClick: exportWord, title: '导出 Word' }, 'Word'),
