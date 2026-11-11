@@ -2043,6 +2043,7 @@ window.__ModuleLoader__.load({
       const [mode, setMode] = useState('week')
       const [anchor, setAnchor] = useState(state.today)
       const [goalDraft, setGoalDraft] = useState({ title: '', target: '', unit: '' })
+      const [pending, setPending] = useState(null)
 
       const weekKey = isoWeekKey(anchor)
       const start = mondayOf(anchor)
@@ -2121,6 +2122,49 @@ window.__ModuleLoader__.load({
           .catch((cause) => notify(String(cause.message || cause), 'error'))
       }, [goalDraft, monthKey, mutate, notify])
 
+      // 删除周/月条目：只删这条计划，挂在下面的任务保留并转为计划外
+      const childCount = useCallback(
+        (id) =>
+          state.items.filter((item) => (Array.isArray(item.parentIds) && item.parentIds.includes(id)) || item.parentId === id)
+            .length,
+        [state.items],
+      )
+
+      const askDelete = useCallback((item) => setPending(item), [])
+
+      const confirmDelete = useCallback(() => {
+        const target = pending
+        if (!target) return
+        setPending(null)
+        mutate('/item/delete', { id: target.id }).then(
+          (payload) => {
+            const label = target.level === 'month' ? '月条目' : '周条目'
+            notify(
+              payload && payload.detached
+                ? '已删除' + label + '，' + payload.detached + ' 条任务已转为计划外'
+                : '已删除' + label,
+            )
+          },
+          (cause) => notify(String(cause.message || cause), 'error'),
+        )
+      }, [pending, mutate, notify])
+
+      const deleteDialog = pending
+        ? (() => {
+            const attached = childCount(pending.id)
+            return h(ConfirmDialog, {
+              title: pending.level === 'month' ? '删除月条目' : '删除周条目',
+              message: '确定删除「' + pending.title + '」？',
+              detail: attached
+                ? '挂在它下面的 ' + attached + ' 条任务会保留，并自动转为「计划外」；已完成记录和工时不受影响。'
+                : '只删除这条计划条目，不会影响任何任务记录。',
+              confirmText: '删除',
+              onCancel: () => setPending(null),
+              onConfirm: confirmDelete,
+            })
+          })()
+        : null
+
       if (mode === 'month') {
         return h(
           'div',
@@ -2184,9 +2228,19 @@ window.__ModuleLoader__.load({
                       const delay = delayLabel(item)
                       return delay ? h('span', { style: { fontSize: 11, color: delay.color } }, delay.text) : null
                     })(),
+                    h(
+                      Btn,
+                      {
+                        small: true,
+                        onClick: () => askDelete(item),
+                        title: '删除这条月条目（关联任务保留为计划外）',
+                      },
+                      '删除',
+                    ),
                   ),
                 ),
           ),
+          deleteDialog,
         )
       }
 
@@ -2270,6 +2324,15 @@ window.__ModuleLoader__.load({
                       },
                       '+ 子任务',
                     ),
+                    h(
+                      Btn,
+                      {
+                        small: true,
+                        onClick: () => askDelete(item),
+                        title: '删除这条周条目（子任务保留为计划外）',
+                      },
+                      '删除',
+                    ),
                   ),
                   childrenOf(item.id).length === 0
                     ? h('div', { style: { fontSize: 12, color: C.sub } }, '还没有拆到日的子任务')
@@ -2328,6 +2391,7 @@ window.__ModuleLoader__.load({
                 ),
               ),
         ),
+        deleteDialog,
       )
     }
 

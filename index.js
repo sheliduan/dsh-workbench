@@ -328,12 +328,33 @@ export function apply(ctx) {
     return item
   }
 
+  function parentsOfItem(item) {
+    const ids = Array.isArray(item.parentIds) ? item.parentIds.map(String) : []
+    if (ids.length === 0 && item.parentId) ids.push(String(item.parentId))
+    return ids
+  }
+
+  // 删掉一条计划条目后，把挂在它下面的任务改为「计划外」而不是一起删掉，
+  // 这样已经记录/已上报的工时不会因为整理计划而丢失。
+  function detachChildren(removedId) {
+    let detached = 0
+    for (const item of state.items) {
+      const parents = parentsOfItem(item)
+      if (!parents.includes(removedId)) continue
+      const remaining = parents.filter((id) => id !== removedId)
+      item.parentIds = remaining
+      item.parentId = remaining[0] || null
+      item.updatedAt = nowIso()
+      detached += 1
+    }
+    return detached
+  }
+
   function removeItem(id) {
     const index = state.items.findIndex((item) => item.id === id)
-    if (index < 0) return false
+    if (index < 0) return { deleted: false, detached: 0 }
     state.items.splice(index, 1)
-    state.items = state.items.filter((item) => item.parentId !== id)
-    return true
+    return { deleted: true, detached: detachChildren(id) }
   }
 
   function rollover(dateKey) {
@@ -2064,9 +2085,9 @@ export function apply(ctx) {
         return send(res, 200, { ok: true, item, sync, state: snapshot() })
       }
       if (action === '/item/delete') {
-        const deleted = removeItem(String(body.id || ''))
+        const result = removeItem(String(body.id || ''))
         await save()
-        return send(res, 200, { ok: true, deleted, state: snapshot() })
+        return send(res, 200, { ok: true, ...result, state: snapshot() })
       }
       if (action === '/item/complete') {
         const item = state.items.find((entry) => entry.id === body.id)
